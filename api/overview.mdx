@@ -1,23 +1,27 @@
 ---
 title: 'API Overview'
-description: 'Introduction to the AQI Predictor API, base URLs, and response formats'
+description: 'Reference architecture for AQI prediction APIs'
 ---
+
+<Note>
+**API Reference:** This section describes a reference API design for AQI prediction systems. For actual implementation status, check the [GitHub repository](https://github.com/git-devisha/aqi-predictor).
+</Note>
 
 ## Introduction
 
-The AQI Predictor API provides machine learning-powered air quality predictions based on environmental and meteorological data. The API enables you to predict Air Quality Index (AQI) values for single locations or process batch predictions for multiple data points.
+This API reference describes a typical REST API design for machine learning-powered air quality predictions. The patterns shown here demonstrate best practices for structuring prediction endpoints, authentication, and data formats.
 
 ## Base URL
 
 All API requests should be made to:
 
-```
+```text
 https://api.aqipredictor.com/api/v1
 ```
 
 For development and testing:
 
-```
+```text
 https://sandbox-api.aqipredictor.com/api/v1
 ```
 

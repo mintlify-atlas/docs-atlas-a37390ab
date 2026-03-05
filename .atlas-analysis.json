@@ -1,0 +1,61 @@
+{
+  "projectType": "ai-ml",
+  "projectName": "AQI Predictor",
+  "projectDescription": "Machine learning system for predicting Air Quality Index (AQI) values based on environmental data.",
+  "theme": "mint",
+  "primaryColor": "#3B82F6",
+  "lightColor": "#60A5FA",
+  "darkColor": "#1E40AF",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": ["introduction", "quickstart", "installation"]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": ["concepts/overview", "concepts/data-sources", "concepts/model-architecture"]
+          },
+          {
+            "group": "Guides",
+            "pages": ["guides/data-preparation", "guides/training", "guides/inference", "guides/evaluation"]
+          },
+          {
+            "group": "Advanced",
+            "pages": ["advanced/tuning", "advanced/deployment", "advanced/monitoring"]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "API Overview",
+            "pages": ["api/overview", "api/authentication"]
+          },
+          {
+            "group": "Endpoints",
+            "pages": ["api/predict", "api/batch-predict", "api/model-info"]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Machine learning models for AQI prediction",
+    "Support for multiple data sources and environmental parameters",
+    "Real-time and batch prediction capabilities",
+    "Model training and evaluation tools",
+    "RESTful API for predictions",
+    "Performance monitoring and model metrics"
+  ],
+  "publicApiSurface": [
+    "POST /api/v1/predict",
+    "POST /api/v1/batch-predict",
+    "GET /api/v1/model/info",
+    "GET /api/v1/model/metrics"
+  ]
+}

@@ -1,0 +1,632 @@
+---
+title: 'Hyperparameter Tuning'
+description: 'Optimize your AQI prediction models through systematic hyperparameter tuning and advanced optimization techniques'
+---
+
+## Overview
+
+Hyperparameter tuning is critical for maximizing the performance of AQI prediction models. This guide covers systematic approaches to optimization, from grid search to advanced Bayesian methods.
+
+## Search Strategies
+
+<Tabs>
+  <Tab title="Grid Search">
+    Grid search exhaustively evaluates all parameter combinations within defined ranges. Best for small parameter spaces.
+
+    ```python
+    from sklearn.model_selection import GridSearchCV
+    from sklearn.ensemble import RandomForestRegressor
+
+    param_grid = {
+        'n_estimators': [100, 200, 500],
+        'max_depth': [10, 20, 30, None],
+        'min_samples_split': [2, 5, 10],
+        'min_samples_leaf': [1, 2, 4],
+        'max_features': ['sqrt', 'log2']
+    }
+
+    rf_model = RandomForestRegressor(random_state=42)
+    grid_search = GridSearchCV(
+        estimator=rf_model,
+        param_grid=param_grid,
+        cv=5,
+        scoring='neg_mean_squared_error',
+        n_jobs=-1,
+        verbose=2
+    )
+
+    grid_search.fit(X_train, y_train)
+    print(f"Best parameters: {grid_search.best_params_}")
+    print(f"Best RMSE: {np.sqrt(-grid_search.best_score_):.2f}")
+    ```
+  </Tab>
+
+  <Tab title="Random Search">
+    Random search samples parameter combinations randomly. More efficient for large parameter spaces.
+
+    ```python
+    from sklearn.model_selection import RandomizedSearchCV
+    from scipy.stats import randint, uniform
+
+    param_distributions = {
+        'n_estimators': randint(100, 1000),
+        'max_depth': randint(10, 100),
+        'min_samples_split': randint(2, 20),
+        'min_samples_leaf': randint(1, 10),
+        'max_features': uniform(0.1, 0.9)
+    }
+
+    random_search = RandomizedSearchCV(
+        estimator=rf_model,
+        param_distributions=param_distributions,
+        n_iter=100,
+        cv=5,
+        scoring='neg_mean_squared_error',
+        n_jobs=-1,
+        random_state=42,
+        verbose=2
+    )
+
+    random_search.fit(X_train, y_train)
+    ```
+  </Tab>
+
+  <Tab title="Bayesian Optimization">
+    Bayesian optimization uses probabilistic models to intelligently explore the parameter space.
+
+    ```python
+    from skopt import BayesSearchCV
+    from skopt.space import Real, Integer
+
+    search_spaces = {
+        'n_estimators': Integer(100, 1000),
+        'max_depth': Integer(10, 100),
+        'min_samples_split': Integer(2, 20),
+        'min_samples_leaf': Integer(1, 10),
+        'max_features': Real(0.1, 0.9)
+    }
+
+    bayes_search = BayesSearchCV(
+        estimator=rf_model,
+        search_spaces=search_spaces,
+        n_iter=50,
+        cv=5,
+        scoring='neg_mean_squared_error',
+        n_jobs=-1,
+        random_state=42
+    )
+
+    bayes_search.fit(X_train, y_train)
+    ```
+  </Tab>
+</Tabs>
+
+<Info>
+  Bayesian optimization typically finds optimal parameters 3-10x faster than random search for complex models.
+</Info>
+
+## Model-Specific Tuning
+
+### Random Forest
+
+Key parameters for AQI prediction:
+
+<CodeGroup>
+```python Tree Structure
+# Control tree complexity
+params = {
+    'n_estimators': 500,      # More trees = better, but diminishing returns
+    'max_depth': 30,          # Prevent overfitting on noisy AQI data
+    'min_samples_split': 10,  # Minimum samples to split a node
+    'min_samples_leaf': 4     # Minimum samples per leaf
+}
+```
+
+```python Feature Selection
+# Control feature sampling
+params = {
+    'max_features': 'sqrt',   # Features considered per split
+    'max_samples': 0.8,       # Bootstrap sample size
+    'bootstrap': True         # Enable bagging
+}
+```
+
+```python Performance
+# Computational considerations
+params = {
+    'n_jobs': -1,            # Parallel processing
+    'warm_start': False,     # Reuse previous fit
+    'oob_score': True        # Out-of-bag validation
+}
+```
+</CodeGroup>
+
+### Gradient Boosting (XGBoost/LightGBM)
+
+<Tabs>
+  <Tab title="XGBoost">
+    ```python
+    import xgboost as xgb
+
+    xgb_params = {
+        # Learning parameters
+        'learning_rate': 0.01,
+        'n_estimators': 1000,
+        'max_depth': 7,
+        
+        # Regularization
+        'min_child_weight': 5,
+        'gamma': 0.1,
+        'subsample': 0.8,
+        'colsample_bytree': 0.8,
+        'reg_alpha': 0.1,
+        'reg_lambda': 1.0,
+        
+        # Performance
+        'tree_method': 'hist',
+        'predictor': 'gpu_predictor',  # GPU acceleration
+        'n_jobs': -1
+    }
+
+    model = xgb.XGBRegressor(**xgb_params)
+    model.fit(
+        X_train, y_train,
+        eval_set=[(X_val, y_val)],
+        early_stopping_rounds=50,
+        verbose=True
+    )
+    ```
+  </Tab>
+
+  <Tab title="LightGBM">
+    ```python
+    import lightgbm as lgb
+
+    lgb_params = {
+        # Learning parameters
+        'learning_rate': 0.01,
+        'n_estimators': 1000,
+        'max_depth': -1,
+        'num_leaves': 31,
+        
+        # Regularization
+        'min_child_samples': 20,
+        'min_split_gain': 0.1,
+        'subsample': 0.8,
+        'colsample_bytree': 0.8,
+        'reg_alpha': 0.1,
+        'reg_lambda': 1.0,
+        
+        # Performance
+        'boosting_type': 'gbdt',
+        'device': 'gpu',
+        'n_jobs': -1
+    }
+
+    model = lgb.LGBMRegressor(**lgb_params)
+    model.fit(
+        X_train, y_train,
+        eval_set=[(X_val, y_val)],
+        callbacks=[lgb.early_stopping(50), lgb.log_evaluation(10)]
+    )
+    ```
+  </Tab>
+</Tabs>
+
+<Warning>
+  Always use early stopping with gradient boosting to prevent overfitting. Monitor validation loss carefully.
+</Warning>
+
+### Neural Networks
+
+For deep learning approaches to AQI prediction:
+
+```python
+import tensorflow as tf
+from tensorflow import keras
+from keras_tuner import RandomSearch
+
+def build_model(hp):
+    model = keras.Sequential()
+    
+    # Input layer
+    model.add(keras.layers.Input(shape=(X_train.shape[1],)))
+    
+    # Hidden layers with tunable parameters
+    for i in range(hp.Int('num_layers', 2, 5)):
+        model.add(keras.layers.Dense(
+            units=hp.Int(f'units_{i}', 32, 512, step=32),
+            activation=hp.Choice('activation', ['relu', 'elu', 'selu'])
+        ))
+        model.add(keras.layers.Dropout(
+            rate=hp.Float(f'dropout_{i}', 0.0, 0.5, step=0.1)
+        ))
+    
+    # Output layer
+    model.add(keras.layers.Dense(1))
+    
+    # Compile with tunable learning rate
+    model.compile(
+        optimizer=keras.optimizers.Adam(
+            learning_rate=hp.Float('learning_rate', 1e-4, 1e-2, sampling='log')
+        ),
+        loss='mse',
+        metrics=['mae']
+    )
+    
+    return model
+
+tuner = RandomSearch(
+    build_model,
+    objective='val_loss',
+    max_trials=50,
+    executions_per_trial=2,
+    directory='tuning_results',
+    project_name='aqi_predictor'
+)
+
+tuner.search(
+    X_train, y_train,
+    epochs=100,
+    validation_data=(X_val, y_val),
+    callbacks=[keras.callbacks.EarlyStopping(patience=10)]
+)
+
+best_model = tuner.get_best_models(num_models=1)[0]
+```
+
+## Cross-Validation Strategies
+
+### Time Series Split
+
+Critical for temporal AQI data:
+
+```python
+from sklearn.model_selection import TimeSeriesSplit
+
+tscv = TimeSeriesSplit(n_splits=5)
+
+for fold, (train_idx, val_idx) in enumerate(tscv.split(X)):
+    X_train_fold = X[train_idx]
+    y_train_fold = y[train_idx]
+    X_val_fold = X[val_idx]
+    y_val_fold = y[val_idx]
+    
+    model.fit(X_train_fold, y_train_fold)
+    score = model.score(X_val_fold, y_val_fold)
+    print(f"Fold {fold + 1} R²: {score:.4f}")
+```
+
+### Grouped K-Fold
+
+For station-based splitting:
+
+```python
+from sklearn.model_selection import GroupKFold
+
+gkf = GroupKFold(n_splits=5)
+
+# Group by station_id to prevent data leakage
+for train_idx, val_idx in gkf.split(X, y, groups=station_ids):
+    X_train_fold = X[train_idx]
+    y_train_fold = y[train_idx]
+    X_val_fold = X[val_idx]
+    y_val_fold = y[val_idx]
+    
+    # Train and evaluate
+    model.fit(X_train_fold, y_train_fold)
+    predictions = model.predict(X_val_fold)
+```
+
+<Info>
+  Use TimeSeriesSplit for temporal validation and GroupKFold to ensure models generalize across monitoring stations.
+</Info>
+
+## Advanced Optimization Techniques
+
+### Optuna Framework
+
+Modern hyperparameter optimization:
+
+```python
+import optuna
+from sklearn.ensemble import GradientBoostingRegressor
+from sklearn.metrics import mean_squared_error
+
+def objective(trial):
+    params = {
+        'n_estimators': trial.suggest_int('n_estimators', 100, 1000),
+        'learning_rate': trial.suggest_float('learning_rate', 0.001, 0.3, log=True),
+        'max_depth': trial.suggest_int('max_depth', 3, 15),
+        'min_samples_split': trial.suggest_int('min_samples_split', 2, 20),
+        'min_samples_leaf': trial.suggest_int('min_samples_leaf', 1, 10),
+        'subsample': trial.suggest_float('subsample', 0.5, 1.0),
+        'max_features': trial.suggest_float('max_features', 0.1, 1.0)
+    }
+    
+    model = GradientBoostingRegressor(**params, random_state=42)
+    model.fit(X_train, y_train)
+    
+    predictions = model.predict(X_val)
+    rmse = np.sqrt(mean_squared_error(y_val, predictions))
+    
+    return rmse
+
+study = optuna.create_study(direction='minimize')
+study.optimize(objective, n_trials=100, show_progress_bar=True)
+
+print(f"Best RMSE: {study.best_value:.2f}")
+print(f"Best parameters: {study.best_params}")
+
+# Visualize optimization
+fig = optuna.visualization.plot_optimization_history(study)
+fig.show()
+
+fig = optuna.visualization.plot_param_importances(study)
+fig.show()
+```
+
+### Ensemble Tuning
+
+Optimize ensemble weights:
+
+```python
+from scipy.optimize import minimize
+
+def ensemble_objective(weights, predictions, y_true):
+    """Optimize ensemble weights to minimize RMSE."""
+    ensemble_pred = np.zeros_like(y_true, dtype=float)
+    
+    for i, pred in enumerate(predictions):
+        ensemble_pred += weights[i] * pred
+    
+    rmse = np.sqrt(mean_squared_error(y_true, ensemble_pred))
+    return rmse
+
+# Get predictions from multiple models
+model_predictions = [
+    rf_model.predict(X_val),
+    xgb_model.predict(X_val),
+    lgb_model.predict(X_val),
+    nn_model.predict(X_val).flatten()
+]
+
+# Initial equal weights
+initial_weights = np.array([0.25, 0.25, 0.25, 0.25])
+
+# Constraints: weights sum to 1, all positive
+constraints = {'type': 'eq', 'fun': lambda w: np.sum(w) - 1}
+bounds = [(0, 1) for _ in range(len(model_predictions))]
+
+result = minimize(
+    ensemble_objective,
+    initial_weights,
+    args=(model_predictions, y_val),
+    method='SLSQP',
+    bounds=bounds,
+    constraints=constraints
+)
+
+optimal_weights = result.x
+print(f"Optimal weights: {optimal_weights}")
+print(f"Ensemble RMSE: {result.fun:.2f}")
+```
+
+## Feature Engineering Optimization
+
+### Automated Feature Selection
+
+<Accordion title="Recursive Feature Elimination">
+  ```python
+  from sklearn.feature_selection import RFECV
+
+  selector = RFECV(
+      estimator=RandomForestRegressor(n_estimators=100, random_state=42),
+      step=1,
+      cv=TimeSeriesSplit(n_splits=5),
+      scoring='neg_mean_squared_error',
+      n_jobs=-1
+  )
+
+  selector.fit(X_train, y_train)
+  
+  print(f"Optimal features: {selector.n_features_}")
+  print(f"Feature ranking: {selector.ranking_}")
+  
+  # Transform datasets
+  X_train_selected = selector.transform(X_train)
+  X_val_selected = selector.transform(X_val)
+  ```
+</Accordion>
+
+<Accordion title="Sequential Feature Selection">
+  ```python
+  from sklearn.feature_selection import SequentialFeatureSelector
+
+  sfs = SequentialFeatureSelector(
+      estimator=RandomForestRegressor(n_estimators=100, random_state=42),
+      n_features_to_select='auto',
+      direction='forward',
+      scoring='neg_mean_squared_error',
+      cv=5,
+      n_jobs=-1
+  )
+
+  sfs.fit(X_train, y_train)
+  selected_features = X_train.columns[sfs.get_support()]
+  print(f"Selected features: {selected_features.tolist()}")
+  ```
+</Accordion>
+
+### Polynomial Features Tuning
+
+```python
+from sklearn.preprocessing import PolynomialFeatures
+from sklearn.pipeline import Pipeline
+
+pipeline = Pipeline([
+    ('poly', PolynomialFeatures()),
+    ('model', RandomForestRegressor(random_state=42))
+])
+
+param_grid = {
+    'poly__degree': [1, 2, 3],
+    'poly__interaction_only': [True, False],
+    'poly__include_bias': [True, False],
+    'model__n_estimators': [100, 200, 500],
+    'model__max_depth': [10, 20, 30]
+}
+
+grid_search = GridSearchCV(
+    pipeline,
+    param_grid,
+    cv=5,
+    scoring='neg_mean_squared_error',
+    n_jobs=-1
+)
+
+grid_search.fit(X_train, y_train)
+```
+
+## Performance Optimization
+
+### Multi-Processing
+
+```python
+from joblib import Parallel, delayed
+
+def train_model(params, X_train, y_train, X_val, y_val):
+    """Train a single model configuration."""
+    model = RandomForestRegressor(**params, random_state=42)
+    model.fit(X_train, y_train)
+    score = model.score(X_val, y_val)
+    return params, score, model
+
+# Generate parameter combinations
+param_combinations = [
+    {'n_estimators': n, 'max_depth': d}
+    for n in [100, 200, 500]
+    for d in [10, 20, 30]
+]
+
+# Train models in parallel
+results = Parallel(n_jobs=-1)(
+    delayed(train_model)(params, X_train, y_train, X_val, y_val)
+    for params in param_combinations
+)
+
+# Find best model
+best_params, best_score, best_model = max(results, key=lambda x: x[1])
+print(f"Best score: {best_score:.4f}")
+print(f"Best parameters: {best_params}")
+```
+
+### GPU Acceleration
+
+```python
+# XGBoost with GPU
+xgb_gpu_params = {
+    'tree_method': 'gpu_hist',
+    'predictor': 'gpu_predictor',
+    'gpu_id': 0
+}
+
+# LightGBM with GPU
+lgb_gpu_params = {
+    'device': 'gpu',
+    'gpu_platform_id': 0,
+    'gpu_device_id': 0
+}
+
+# TensorFlow with GPU
+import tensorflow as tf
+print(f"GPUs available: {len(tf.config.list_physical_devices('GPU'))}")
+
+with tf.device('/GPU:0'):
+    model = build_neural_network()
+    model.fit(X_train, y_train)
+```
+
+<Warning>
+  GPU acceleration requires proper CUDA installation and compatible hardware. Verify GPU availability before training.
+</Warning>
+
+## Experiment Tracking
+
+### MLflow Integration
+
+```python
+import mlflow
+import mlflow.sklearn
+
+mlflow.set_tracking_uri('http://localhost:5000')
+mlflow.set_experiment('aqi_predictor_tuning')
+
+with mlflow.start_run(run_name='random_forest_tuning'):
+    # Log parameters
+    mlflow.log_params(best_params)
+    
+    # Train model
+    model = RandomForestRegressor(**best_params)
+    model.fit(X_train, y_train)
+    
+    # Evaluate and log metrics
+    train_score = model.score(X_train, y_train)
+    val_score = model.score(X_val, y_val)
+    predictions = model.predict(X_val)
+    rmse = np.sqrt(mean_squared_error(y_val, predictions))
+    mae = mean_absolute_error(y_val, predictions)
+    
+    mlflow.log_metric('train_r2', train_score)
+    mlflow.log_metric('val_r2', val_score)
+    mlflow.log_metric('val_rmse', rmse)
+    mlflow.log_metric('val_mae', mae)
+    
+    # Log model
+    mlflow.sklearn.log_model(model, 'model')
+    
+    # Log artifacts
+    feature_importance = pd.DataFrame({
+        'feature': X_train.columns,
+        'importance': model.feature_importances_
+    }).sort_values('importance', ascending=False)
+    
+    feature_importance.to_csv('feature_importance.csv', index=False)
+    mlflow.log_artifact('feature_importance.csv')
+```
+
+## Best Practices
+
+<Accordion title="Validation Strategy">
+  - Always use time-aware splitting for temporal data
+  - Validate on unseen time periods, not random samples
+  - Use grouped cross-validation to test generalization across stations
+  - Reserve a holdout test set for final evaluation
+</Accordion>
+
+<Accordion title="Search Efficiency">
+  - Start with random search to explore the parameter space
+  - Use Bayesian optimization for fine-tuning
+  - Leverage parallel processing for independent trials
+  - Implement early stopping to save computational resources
+</Accordion>
+
+<Accordion title="Overfitting Prevention">
+  - Monitor training vs validation metrics closely
+  - Increase regularization if overfitting is detected
+  - Reduce model complexity (depth, features) when needed
+  - Use ensemble methods to reduce variance
+</Accordion>
+
+<Accordion title="Documentation">
+  - Track all experiments with MLflow or similar tools
+  - Document parameter choices and their rationale
+  - Save feature engineering pipelines with models
+  - Version control your training code and configurations
+</Accordion>
+
+## Next Steps
+
+- [Deploy optimized models](/advanced/deployment)
+- [Monitor model performance](/advanced/monitoring)
+- [Review model architecture](/models/architecture)

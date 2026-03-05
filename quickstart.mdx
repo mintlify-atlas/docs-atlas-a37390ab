@@ -1,80 +1,309 @@
 ---
 title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+description: "Make your first AQI prediction in less than 5 minutes"
 ---
 
-## Get started in three steps
+## Get Started in 3 Steps
 
-Get your documentation site running locally and make your first customization.
+This guide will walk you through installing AQI Predictor, obtaining an API key, and making your first air quality prediction.
 
-### Step 1: Set up your local environment
-
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
+<Steps>
+  <Step title="Install AQI Predictor">
+    Install the Python package using pip:
     
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
+    <CodeGroup>
+    ```bash pip
+    pip install aqi-predictor
+    ```
     
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 2: Deploy your changes
-
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
+    ```bash conda
+    conda install -c conda-forge aqi-predictor
+    ```
     
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+    ```bash poetry
+    poetry add aqi-predictor
+    ```
+    </CodeGroup>
+    
+    <Note>
+    AQI Predictor requires Python 3.8 or higher. Check your Python version with `python --version`
+    </Note>
+  </Step>
+  
+  <Step title="Get Your API Key">
+    Sign up for a free account and obtain your API key. Contact your administrator or visit the project repository to get access credentials.
+    
+    Once you have your API key:
+    
+    <Warning>
+    Keep your API key secure! Never commit it to version control or share it publicly.
+    </Warning>
+    
+    Store your API key as an environment variable:
+    
+    ```bash
+    export AQI_API_KEY="your_api_key_here"
+    ```
+    
+    Or create a `.env` file:
+    
+    ```bash .env
+    AQI_API_KEY=your_api_key_here
+    ```
+  </Step>
+  
+  <Step title="Make Your First Prediction">
+    Create a Python script and make your first AQI prediction:
+    
+    ```python predict.py
+    from aqi_predictor import AQIClient
+    import os
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+    # Initialize the client
+    client = AQIClient(api_key=os.getenv("AQI_API_KEY"))
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+    # Prepare environmental data
+    environmental_data = {
+        "temperature": 25.5,      # Temperature in Celsius
+        "humidity": 65,           # Relative humidity (%)
+        "pressure": 1013.25,      # Atmospheric pressure (hPa)
+        "wind_speed": 3.2,        # Wind speed (m/s)
+        "pm25": 12.3,            # PM2.5 concentration (μg/m³)
+        "pm10": 22.1,            # PM10 concentration (μg/m³)
+        "no2": 15.2,             # NO2 concentration (ppb)
+        "o3": 35.6,              # O3 concentration (ppb)
+        "location": {
+            "lat": 37.7749,      # San Francisco coordinates
+            "lon": -122.4194
+        }
+    }
 
-### Step 3: Go live
+    # Get prediction
+    prediction = client.predict(environmental_data)
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+    # Display results
+    print(f"Predicted AQI: {prediction.aqi}")
+    print(f"Category: {prediction.category}")
+    print(f"Confidence: {prediction.confidence:.2%}")
+    print(f"Health Recommendation: {prediction.health_message}")
+    ```
+    
+    Run your script:
+    
+    ```bash
+    python predict.py
+    ```
+    
+    <Accordion title="Expected Output">
+    ```
+    Predicted AQI: 42
+    Category: Good
+    Confidence: 94.23%
+    Health Recommendation: Air quality is satisfactory, and air pollution poses little or no risk.
+    ```
+    </Accordion>
+  </Step>
+</Steps>
 
-## Next steps
+## Understanding the Response
 
-Now that you have your docs running, explore these key features:
+The prediction response includes several fields:
+
+<ResponseField name="aqi" type="integer">
+  The predicted Air Quality Index value (0-500)
+</ResponseField>
+
+<ResponseField name="category" type="string">
+  The AQI category: Good, Moderate, Unhealthy for Sensitive Groups, Unhealthy, Very Unhealthy, or Hazardous
+</ResponseField>
+
+<ResponseField name="confidence" type="float">
+  Model confidence score (0-1) indicating prediction reliability
+</ResponseField>
+
+<ResponseField name="health_message" type="string">
+  Human-readable health recommendation based on the predicted AQI
+</ResponseField>
+
+<ResponseField name="timestamp" type="string">
+  ISO 8601 timestamp of when the prediction was made
+</ResponseField>
+
+<ResponseField name="components" type="object">
+  Breakdown of individual pollutant contributions to the AQI
+</ResponseField>
+
+## Try Different Scenarios
+
+Experiment with different environmental conditions to see how they affect AQI predictions:
+
+<Tabs>
+  <Tab title="High Pollution">
+    ```python
+    # Simulate high pollution conditions
+    high_pollution = {
+        "temperature": 32.0,
+        "humidity": 45,
+        "wind_speed": 1.2,  # Low wind speed
+        "pm25": 85.4,        # High PM2.5
+        "pm10": 120.3,       # High PM10
+        "no2": 62.1,
+        "location": {"lat": 34.0522, "lon": -118.2437}
+    }
+    
+    result = client.predict(high_pollution)
+    # Expected: AQI ~150-180 (Unhealthy)
+    ```
+  </Tab>
+  
+  <Tab title="Clean Air">
+    ```python
+    # Simulate clean air conditions
+    clean_air = {
+        "temperature": 18.0,
+        "humidity": 55,
+        "wind_speed": 5.8,  # Good wind speed
+        "pm25": 4.2,         # Low PM2.5
+        "pm10": 8.5,         # Low PM10
+        "no2": 8.3,
+        "location": {"lat": 47.6062, "lon": -122.3321}
+    }
+    
+    result = client.predict(clean_air)
+    # Expected: AQI ~20-30 (Good)
+    ```
+  </Tab>
+  
+  <Tab title="Seasonal Variations">
+    ```python
+    # Winter conditions (potential for inversions)
+    winter = {
+        "temperature": 5.0,
+        "humidity": 75,
+        "wind_speed": 2.1,
+        "pm25": 28.6,
+        "pm10": 45.2,
+        "no2": 32.4,
+    }
+    
+    # Summer conditions (potential for ozone)
+    summer = {
+        "temperature": 35.0,
+        "humidity": 40,
+        "wind_speed": 3.5,
+        "pm25": 18.2,
+        "pm10": 28.1,
+        "o3": 82.5,  # High ozone
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Batch Predictions
+
+Need to process multiple locations or time periods? Use batch predictions:
+
+```python
+from aqi_predictor import AQIClient
+
+client = AQIClient(api_key=os.getenv("AQI_API_KEY"))
+
+# Multiple predictions in one request
+locations = [
+    {"temperature": 25.5, "humidity": 65, "pm25": 12.3, "location": {"lat": 37.7749, "lon": -122.4194}},
+    {"temperature": 28.1, "humidity": 58, "pm25": 18.7, "location": {"lat": 34.0522, "lon": -118.2437}},
+    {"temperature": 22.3, "humidity": 72, "pm25": 9.1, "location": {"lat": 40.7128, "lon": -74.0060}},
+]
+
+predictions = client.batch_predict(locations)
+
+for i, pred in enumerate(predictions):
+    print(f"Location {i+1}: AQI {pred.aqi} - {pred.category}")
+```
+
+## Using the REST API
+
+Prefer to use the REST API directly? Here's how:
+
+<CodeGroup>
+```bash cURL
+curl -X POST https://api.aqipredictor.com/v1/predict \
+  -H "X-API-Key: your_api_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "temperature": 25.5,
+    "humidity": 65,
+    "pm25": 12.3,
+    "pm10": 22.1,
+    "no2": 15.2,
+    "location": {"lat": 37.7749, "lon": -122.4194}
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.aqipredictor.com/v1/predict', {
+  method: 'POST',
+  headers: {
+    'X-API-Key': 'your_api_key',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    temperature: 25.5,
+    humidity: 65,
+    pm25: 12.3,
+    pm10: 22.1,
+    no2: 15.2,
+    location: { lat: 37.7749, lon: -122.4194 }
+  })
+});
+
+const prediction = await response.json();
+console.log(`AQI: ${prediction.aqi}`);
+```
+
+```python requests
+import requests
+
+response = requests.post(
+    'https://api.aqipredictor.com/v1/predict',
+    headers={'X-API-Key': 'your_api_key'},
+    json={
+        'temperature': 25.5,
+        'humidity': 65,
+        'pm25': 12.3,
+        'pm10': 22.1,
+        'no2': 15.2,
+        'location': {'lat': 37.7749, 'lon': -122.4194}
+    }
+)
+
+prediction = response.json()
+print(f"AQI: {prediction['aqi']}")
+```
+</CodeGroup>
+
+## Next Steps
+
+Now that you've made your first prediction, explore more advanced features:
 
 <CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+  <Card title="Installation Guide" icon="download" href="/installation">
+    Learn about advanced installation options and dependencies
+  </Card>
+  
+  <Card title="Core Concepts" icon="brain" href="/concepts/overview">
+    Understand how AQI prediction works under the hood
+  </Card>
+  
+  <Card title="Training Models" icon="chart-line" href="/guides/training">
+    Train custom models on your regional data
+  </Card>
+  
+  <Card title="API Reference" icon="code" href="/api/overview">
+    Explore the complete API documentation
+  </Card>
 </CardGroup>
 
-<Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
-</Note>
+<Tip>
+**Pro tip:** Start with pre-trained models for quick results, then train custom models on your regional data for improved accuracy.
+</Tip>

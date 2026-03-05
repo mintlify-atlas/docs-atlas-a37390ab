@@ -1,97 +1,234 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: "AQI Predictor Documentation"
+mode: "custom"
 ---
 
-## Setting up
+<div className="relative overflow-hidden bg-gradient-to-br from-[#3B82F6] via-[#2563EB] to-[#1E40AF] dark:from-[#1E40AF] dark:via-[#1E3A8A] dark:to-[#1E293B] py-20">
+  <div className="max-w-6xl mx-auto px-6">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+      <div className="lg:col-span-7">
+        <h1 className="text-5xl md:text-6xl font-bold text-white mb-6">
+          Predict Air Quality with Machine Learning
+        </h1>
+        <p className="text-xl text-blue-100 max-w-2xl mb-8">
+          AQI Predictor is a machine learning system for forecasting Air Quality Index values based on environmental data. Build accurate predictions with our powerful ML models and APIs.
+        </p>
+        <div className="flex flex-wrap gap-4">
+          <a
+            href="/quickstart"
+            className="inline-flex items-center px-6 py-3 rounded-lg bg-white text-[#3B82F6] font-semibold hover:bg-blue-50 transition-colors"
+          >
+            Get Started
+          </a>
+          <a
+            href="/api/overview"
+            className="inline-flex items-center px-6 py-3 rounded-lg border-2 border-white/30 bg-white/10 text-white font-semibold hover:bg-white/20 transition-colors"
+          >
+            Explore API
+          </a>
+        </div>
+      </div>
+      <div className="lg:col-span-5 hidden lg:block">
+        <div className="relative">
+          <div className="absolute inset-0 bg-gradient-to-r from-[#60A5FA] to-[#3B82F6] rounded-2xl blur-2xl opacity-50"></div>
+          <div className="relative bg-[#1a1d27] dark:bg-[#0f1117] rounded-2xl p-6 border border-white/10">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-3 h-3 rounded-full bg-red-500"></div>
+              <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+              <div className="w-3 h-3 rounded-full bg-green-500"></div>
+            </div>
+            <pre className="text-sm text-gray-300"><code>{`{
+  "location": "San Francisco",
+  "timestamp": "2024-03-15T10:00:00Z",
+  "aqi": 42,
+  "category": "Good",
+  "confidence": 0.94
+}`}</code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
-Get your documentation site up and running in minutes.
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">Quick Start</h2>
+  <p className="text-base text-gray-600 dark:text-gray-400 mb-8">Get up and running with AQI Predictor in minutes.</p>
+  
+  <Steps>
+    <Step title="Install the package">
+      Install AQI Predictor using pip:
+      
+      ```bash
+      pip install aqi-predictor
+      ```
+    </Step>
+    
+    <Step title="Configure your API key">
+      Set up authentication by configuring your API credentials:
+      
+      ```python
+      from aqi_predictor import AQIClient
 
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
+      client = AQIClient(api_key="your_api_key_here")
+      ```
+      
+      <Note>Get your API key from the dashboard after creating an account.</Note>
+    </Step>
+    
+    <Step title="Make your first prediction">
+      Submit environmental data to get an AQI prediction:
+      
+      ```python
+      prediction = client.predict({
+          "temperature": 25.5,
+          "humidity": 65,
+          "pm25": 12.3,
+          "pm10": 22.1,
+          "no2": 15.2,
+          "location": {"lat": 37.7749, "lon": -122.4194}
+      })
 
-## Make it yours
+      print(f"Predicted AQI: {prediction.aqi}")
+      print(f"Category: {prediction.category}")
+      ```
+      
+      <Accordion title="Example Response">
+        ```json
+        {
+          "aqi": 42,
+          "category": "Good",
+          "confidence": 0.94,
+          "timestamp": "2024-03-15T10:00:00Z",
+          "components": {
+            "pm25": 12.3,
+            "pm10": 22.1,
+            "no2": 15.2
+          }
+        }
+        ```
+      </Accordion>
+    </Step>
+  </Steps>
+</div>
 
-Design a docs site that looks great and empowers your users.
-
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
-  </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
-  </Card>
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">Explore by Topic</h2>
+  <p className="text-base text-gray-600 dark:text-gray-400 mb-8">Learn about core concepts and start building with AQI Predictor.</p>
+  
+  <CardGroup cols={3}>
     <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
-  </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
-  </Card>
-</Columns>
+      title="Core Concepts"
+      icon="brain"
+      href="/concepts/overview"
+    >
+      Understand the fundamentals of AQI prediction and our ML architecture.
+    </Card>
+    <Card
+      title="Training Guide"
+      icon="chart-line"
+      href="/guides/training"
+    >
+      Train custom models on your own environmental datasets.
+    </Card>
+    <Card
+      title="API Reference"
+      icon="code"
+      href="/api/overview"
+    >
+      Complete API documentation for predictions and model management.
+    </Card>
+    <Card
+      title="Data Sources"
+      icon="database"
+      href="/concepts/data-sources"
+    >
+      Learn about supported data sources and environmental parameters.
+    </Card>
+    <Card
+      title="Deployment"
+      icon="rocket"
+      href="/advanced/deployment"
+    >
+      Deploy AQI Predictor models to production environments.
+    </Card>
+    <Card
+      title="Monitoring"
+      icon="gauge"
+      href="/advanced/monitoring"
+    >
+      Track model performance and prediction accuracy over time.
+    </Card>
+  </CardGroup>
+</div>
 
-## Create beautiful pages
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">Key Features</h2>
+  <p className="text-base text-gray-600 dark:text-gray-400 mb-8">Everything you need to build accurate air quality predictions.</p>
+  
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div className="p-6 rounded-xl border border-gray-200 dark:border-[#27272a] bg-gray-50 dark:bg-[#1a1d27]">
+      <div className="text-[#3B82F6] mb-3">
+        <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
+          <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
+          <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clipRule="evenodd" />
+        </svg>
+      </div>
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Pre-trained Models</h3>
+      <p className="text-gray-600 dark:text-gray-400">Use production-ready ML models trained on extensive environmental datasets for instant predictions.</p>
+    </div>
+    
+    <div className="p-6 rounded-xl border border-gray-200 dark:border-[#27272a] bg-gray-50 dark:bg-[#1a1d27]">
+      <div className="text-[#3B82F6] mb-3">
+        <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
+          <path fillRule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm5 6a1 1 0 10-2 0v3.586l-1.293-1.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V8z" clipRule="evenodd" />
+        </svg>
+      </div>
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Multiple Data Sources</h3>
+      <p className="text-gray-600 dark:text-gray-400">Integrate environmental data from various sensors and APIs for comprehensive AQI analysis.</p>
+    </div>
+    
+    <div className="p-6 rounded-xl border border-gray-200 dark:border-[#27272a] bg-gray-50 dark:bg-[#1a1d27]">
+      <div className="text-[#3B82F6] mb-3">
+        <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
+          <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
+        </svg>
+      </div>
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Real-time & Batch</h3>
+      <p className="text-gray-600 dark:text-gray-400">Get instant predictions via REST API or process large datasets with batch prediction endpoints.</p>
+    </div>
+    
+    <div className="p-6 rounded-xl border border-gray-200 dark:border-[#27272a] bg-gray-50 dark:bg-[#1a1d27]">
+      <div className="text-[#3B82F6] mb-3">
+        <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
+          <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
+        </svg>
+      </div>
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Model Customization</h3>
+      <p className="text-gray-600 dark:text-gray-400">Train and fine-tune models on your specific regional data for improved accuracy.</p>
+    </div>
+  </div>
+</div>
 
-Everything you need to create world-class documentation.
-
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
-  </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
-  </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
-  </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
-
-## Need inspiration?
-
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+<div className="mt-20 mb-16 max-w-5xl mx-auto px-6">
+  <div className="rounded-2xl bg-gradient-to-r from-[#3B82F6] to-[#2563EB] dark:from-[#1E40AF] dark:to-[#1E3A8A] p-8 md:p-12 text-center">
+    <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">Ready to Get Started?</h2>
+    <p className="text-xl text-blue-100 mb-8 max-w-2xl mx-auto">
+      Start building accurate air quality predictions in minutes with our comprehensive API and ML tools.
+    </p>
+    <div className="flex flex-wrap justify-center gap-4">
+      <a
+        href="/quickstart"
+        className="inline-flex items-center px-8 py-4 rounded-lg bg-white text-[#3B82F6] font-semibold hover:bg-blue-50 transition-colors"
+      >
+        View Quickstart Guide
+      </a>
+      <a
+        href="/introduction"
+        className="inline-flex items-center px-8 py-4 rounded-lg border-2 border-white/30 bg-white/10 text-white font-semibold hover:bg-white/20 transition-colors"
+      >
+        Read Documentation
+      </a>
+    </div>
+  </div>
+</div>

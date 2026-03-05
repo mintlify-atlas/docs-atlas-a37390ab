@@ -1,0 +1,630 @@
+---
+title: 'Batch Predict'
+description: 'Process multiple AQI predictions in a single request for improved efficiency'
+---
+
+## Endpoint
+
+```
+POST /api/v1/batch-predict
+```
+
+Process multiple Air Quality Index predictions in a single API request. This endpoint is optimized for high-throughput scenarios such as historical analysis, multi-location monitoring, or time-series forecasting.
+
+<Note>
+Batch predictions are more efficient than individual requests and count as a single rate limit operation.
+</Note>
+
+## Authentication
+
+This endpoint requires authentication. Include your API key in the `X-API-Key` header.
+
+See [Authentication](/api/authentication) for details.
+
+## Availability
+
+<Warning>
+Batch predictions require a **Basic** tier subscription or higher. Free tier accounts are limited to single predictions.
+</Warning>
+
+## Request Parameters
+
+<ParamField body="predictions" type="array" required>
+  Array of prediction requests. Each item contains the same parameters as the single [Predict endpoint](/api/predict).
+  
+  - Minimum: 2 items
+  - Maximum: 100 items (Free/Basic), 500 items (Pro), 1000 items (Enterprise)
+</ParamField>
+
+<ParamField body="fail_on_error" type="boolean">
+  If true, the entire batch fails if any single prediction fails. If false, failed predictions return error details while successful ones return results.
+  
+  - Default: `false`
+  - Recommended: `false` for robustness
+</ParamField>
+
+<ParamField body="parallel_processing" type="boolean">
+  Enable parallel processing for faster results. May slightly increase costs.
+  
+  - Default: `true`
+  - Available on Pro tier and above
+</ParamField>
+
+### Prediction Item Schema
+
+Each item in the `predictions` array should contain:
+
+```json
+{
+  "id": "unique-identifier",  // Optional: Your reference ID
+  "temperature": 25.5,
+  "humidity": 65,
+  "pressure": 1015.3,  // Optional
+  "wind_speed": 12.5,  // Optional
+  "pm25": 35.2,
+  "pm10": 48.7,
+  "no2": 25.3,
+  "o3": 45.1,
+  "co": 0.8,
+  "location": {  // Optional
+    "latitude": 37.7749,
+    "longitude": -122.4194,
+    "city": "San Francisco"
+  },
+  "timestamp": "2026-03-05T14:30:00Z"  // Optional
+}
+```
+
+## Response Fields
+
+<ResponseField name="success" type="boolean">
+  Indicates if the batch request was processed successfully.
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  Contains batch processing results.
+  
+  <ResponseField name="data.total" type="integer">
+    Total number of predictions in the batch.
+  </ResponseField>
+  
+  <ResponseField name="data.successful" type="integer">
+    Number of predictions that completed successfully.
+  </ResponseField>
+  
+  <ResponseField name="data.failed" type="integer">
+    Number of predictions that failed.
+  </ResponseField>
+  
+  <ResponseField name="data.results" type="array">
+    Array of prediction results, maintaining the same order as the request.
+    
+    Each result contains either:
+    - Success: Same structure as single prediction response
+    - Error: Error details with the original request ID
+  </ResponseField>
+  
+  <ResponseField name="data.processing_time_ms" type="integer">
+    Total processing time for the entire batch in milliseconds.
+  </ResponseField>
+</ResponseField>
+
+<ResponseField name="timestamp" type="string">
+  ISO 8601 timestamp when batch processing completed.
+</ResponseField>
+
+## Example Request
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://api.aqipredictor.com/api/v1/batch-predict \
+  -H "X-API-Key: aqp_prod_1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "predictions": [
+      {
+        "id": "sf-station-01",
+        "temperature": 18.5,
+        "humidity": 72,
+        "pm25": 28.3,
+        "pm10": 42.1,
+        "no2": 22.5,
+        "o3": 38.7,
+        "co": 0.6,
+        "location": {
+          "city": "San Francisco",
+          "latitude": 37.7749,
+          "longitude": -122.4194
+        }
+      },
+      {
+        "id": "la-station-01",
+        "temperature": 28.2,
+        "humidity": 45,
+        "pm25": 55.8,
+        "pm10": 78.4,
+        "no2": 48.2,
+        "o3": 72.3,
+        "co": 1.2,
+        "location": {
+          "city": "Los Angeles",
+          "latitude": 34.0522,
+          "longitude": -118.2437
+        }
+      },
+      {
+        "id": "seattle-station-01",
+        "temperature": 15.3,
+        "humidity": 85,
+        "pm25": 18.7,
+        "pm10": 25.3,
+        "no2": 15.8,
+        "o3": 28.4,
+        "co": 0.4,
+        "location": {
+          "city": "Seattle",
+          "latitude": 47.6062,
+          "longitude": -122.3321
+        }
+      }
+    ],
+    "fail_on_error": false,
+    "parallel_processing": true
+  }'
+```
+
+```python Python
+import requests
+import json
+
+url = "https://api.aqipredictor.com/api/v1/batch-predict"
+api_key = "aqp_prod_1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p"
+
+headers = {
+    "X-API-Key": api_key,
+    "Content-Type": "application/json"
+}
+
+# Define monitoring stations
+stations = [
+    {
+        "id": "sf-station-01",
+        "temperature": 18.5,
+        "humidity": 72,
+        "pm25": 28.3,
+        "pm10": 42.1,
+        "no2": 22.5,
+        "o3": 38.7,
+        "co": 0.6,
+        "location": {"city": "San Francisco"}
+    },
+    {
+        "id": "la-station-01",
+        "temperature": 28.2,
+        "humidity": 45,
+        "pm25": 55.8,
+        "pm10": 78.4,
+        "no2": 48.2,
+        "o3": 72.3,
+        "co": 1.2,
+        "location": {"city": "Los Angeles"}
+    },
+    {
+        "id": "seattle-station-01",
+        "temperature": 15.3,
+        "humidity": 85,
+        "pm25": 18.7,
+        "pm10": 25.3,
+        "no2": 15.8,
+        "o3": 28.4,
+        "co": 0.4,
+        "location": {"city": "Seattle"}
+    }
+]
+
+payload = {
+    "predictions": stations,
+    "fail_on_error": False,
+    "parallel_processing": True
+}
+
+response = requests.post(url, json=payload, headers=headers)
+result = response.json()
+
+print(f"Total: {result['data']['total']}")
+print(f"Successful: {result['data']['successful']}")
+print(f"Failed: {result['data']['failed']}")
+
+for item in result['data']['results']:
+    if item['success']:
+        print(f"{item['id']}: AQI {item['data']['aqi']} ({item['data']['category']})")
+    else:
+        print(f"{item['id']}: Error - {item['error']['message']}")
+```
+
+```javascript JavaScript
+const url = 'https://api.aqipredictor.com/api/v1/batch-predict';
+const apiKey = 'aqp_prod_1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p';
+
+const stations = [
+  {
+    id: 'sf-station-01',
+    temperature: 18.5,
+    humidity: 72,
+    pm25: 28.3,
+    pm10: 42.1,
+    no2: 22.5,
+    o3: 38.7,
+    co: 0.6,
+    location: { city: 'San Francisco' }
+  },
+  {
+    id: 'la-station-01',
+    temperature: 28.2,
+    humidity: 45,
+    pm25: 55.8,
+    pm10: 78.4,
+    no2: 48.2,
+    o3: 72.3,
+    co: 1.2,
+    location: { city: 'Los Angeles' }
+  },
+  {
+    id: 'seattle-station-01',
+    temperature: 15.3,
+    humidity: 85,
+    pm25: 18.7,
+    pm10: 25.3,
+    no2: 15.8,
+    o3: 28.4,
+    co: 0.4,
+    location: { city: 'Seattle' }
+  }
+];
+
+const payload = {
+  predictions: stations,
+  fail_on_error: false,
+  parallel_processing: true
+};
+
+fetch(url, {
+  method: 'POST',
+  headers: {
+    'X-API-Key': apiKey,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify(payload)
+})
+  .then(response => response.json())
+  .then(data => {
+    console.log(`Total: ${data.data.total}`);
+    console.log(`Successful: ${data.data.successful}`);
+    console.log(`Failed: ${data.data.failed}`);
+    
+    data.data.results.forEach(item => {
+      if (item.success) {
+        console.log(`${item.id}: AQI ${item.data.aqi} (${item.data.category})`);
+      } else {
+        console.log(`${item.id}: Error - ${item.error.message}`);
+      }
+    });
+  })
+  .catch(error => console.error('Error:', error));
+```
+
+</CodeGroup>
+
+## Example Response
+
+```json 200 Success
+{
+  "success": true,
+  "data": {
+    "total": 3,
+    "successful": 3,
+    "failed": 0,
+    "results": [
+      {
+        "id": "sf-station-01",
+        "success": true,
+        "data": {
+          "aqi": 52,
+          "category": "moderate",
+          "dominant_pollutant": "pm25",
+          "confidence": 0.92,
+          "health_recommendation": "Air quality is acceptable for most individuals."
+        }
+      },
+      {
+        "id": "la-station-01",
+        "success": true,
+        "data": {
+          "aqi": 98,
+          "category": "moderate",
+          "dominant_pollutant": "o3",
+          "confidence": 0.87,
+          "health_recommendation": "Sensitive individuals should limit prolonged outdoor exertion."
+        }
+      },
+      {
+        "id": "seattle-station-01",
+        "success": true,
+        "data": {
+          "aqi": 38,
+          "category": "good",
+          "dominant_pollutant": "pm25",
+          "confidence": 0.94,
+          "health_recommendation": "Air quality is satisfactory, and air pollution poses little or no risk."
+        }
+      }
+    ],
+    "processing_time_ms": 234
+  },
+  "timestamp": "2026-03-05T14:30:00Z"
+}
+```
+
+## Partial Success Response
+
+When `fail_on_error` is `false` and some predictions fail:
+
+```json 200 Partial Success
+{
+  "success": true,
+  "data": {
+    "total": 3,
+    "successful": 2,
+    "failed": 1,
+    "results": [
+      {
+        "id": "sf-station-01",
+        "success": true,
+        "data": {
+          "aqi": 52,
+          "category": "moderate",
+          "dominant_pollutant": "pm25",
+          "confidence": 0.92,
+          "health_recommendation": "Air quality is acceptable for most individuals."
+        }
+      },
+      {
+        "id": "la-station-01",
+        "success": false,
+        "error": {
+          "code": "INVALID_PARAMETER",
+          "message": "PM2.5 value must be between 0 and 500 µg/m³.",
+          "details": {
+            "parameter": "pm25",
+            "value": 650
+          }
+        }
+      },
+      {
+        "id": "seattle-station-01",
+        "success": true,
+        "data": {
+          "aqi": 38,
+          "category": "good",
+          "dominant_pollutant": "pm25",
+          "confidence": 0.94,
+          "health_recommendation": "Air quality is satisfactory."
+        }
+      }
+    ],
+    "processing_time_ms": 198
+  },
+  "timestamp": "2026-03-05T14:30:00Z"
+}
+```
+
+## Error Responses
+
+<Accordion title="400 Bad Request - Batch Too Large">
+```json
+{
+  "success": false,
+  "error": {
+    "code": "BATCH_TOO_LARGE",
+    "message": "Batch size exceeds maximum allowed for your subscription tier.",
+    "details": {
+      "provided": 150,
+      "maximum": 100,
+      "tier": "basic",
+      "hint": "Upgrade to Pro for batches up to 500 items."
+    }
+  },
+  "timestamp": "2026-03-05T14:30:00Z"
+}
+```
+</Accordion>
+
+<Accordion title="400 Bad Request - Batch Too Small">
+```json
+{
+  "success": false,
+  "error": {
+    "code": "BATCH_TOO_SMALL",
+    "message": "Batch must contain at least 2 predictions.",
+    "details": {
+      "provided": 1,
+      "minimum": 2,
+      "hint": "Use the /predict endpoint for single predictions."
+    }
+  },
+  "timestamp": "2026-03-05T14:30:00Z"
+}
+```
+</Accordion>
+
+<Accordion title="403 Forbidden - Feature Not Available">
+```json
+{
+  "success": false,
+  "error": {
+    "code": "INSUFFICIENT_PERMISSIONS",
+    "message": "Batch predictions require a Basic subscription or higher.",
+    "details": {
+      "current_tier": "free",
+      "required_tier": "basic",
+      "upgrade_url": "https://dashboard.aqipredictor.com/upgrade"
+    }
+  },
+  "timestamp": "2026-03-05T14:30:00Z"
+}
+```
+</Accordion>
+
+<Accordion title="500 Internal Server Error">
+```json
+{
+  "success": false,
+  "error": {
+    "code": "BATCH_PROCESSING_FAILED",
+    "message": "Batch processing encountered an internal error.",
+    "details": {
+      "error_id": "batch_err_3f2e1d0c",
+      "partial_results": false,
+      "hint": "Please try again with a smaller batch size."
+    }
+  },
+  "timestamp": "2026-03-05T14:30:00Z"
+}
+```
+</Accordion>
+
+## Batch Size Limits
+
+| Subscription Tier | Maximum Batch Size | Processing Speed |
+|-------------------|--------------------|-----------------|
+| Free | Not available | - |
+| Basic | 100 predictions | Standard |
+| Pro | 500 predictions | Parallel |
+| Enterprise | 1,000 predictions | Optimized |
+
+## Use Cases
+
+<Accordion title="Historical Data Analysis">
+Process historical air quality data to identify trends and patterns:
+
+```python
+import pandas as pd
+import requests
+
+# Load historical data
+df = pd.read_csv('historical_readings.csv')
+
+# Convert to API format
+predictions = []
+for _, row in df.iterrows():
+    predictions.append({
+        'id': row['station_id'],
+        'temperature': row['temp'],
+        'humidity': row['humidity'],
+        'pm25': row['pm25'],
+        'pm10': row['pm10'],
+        'no2': row['no2'],
+        'o3': row['o3'],
+        'co': row['co'],
+        'timestamp': row['timestamp']
+    })
+
+# Process in batches of 100
+for i in range(0, len(predictions), 100):
+    batch = predictions[i:i+100]
+    response = requests.post(url, json={'predictions': batch}, headers=headers)
+    # Process results...
+```
+</Accordion>
+
+<Accordion title="Multi-Location Monitoring">
+Monitor air quality across multiple locations simultaneously:
+
+```javascript
+const locations = ['SF', 'LA', 'NYC', 'Chicago', 'Seattle'];
+
+// Fetch current readings from all sensors
+const readings = await Promise.all(
+  locations.map(loc => fetchSensorData(loc))
+);
+
+// Batch predict for all locations
+const predictions = readings.map((reading, idx) => ({
+  id: locations[idx],
+  ...reading
+}));
+
+const response = await fetch(batchUrl, {
+  method: 'POST',
+  headers: { 'X-API-Key': apiKey, 'Content-Type': 'application/json' },
+  body: JSON.stringify({ predictions })
+});
+
+const results = await response.json();
+// Update dashboard with all predictions
+```
+</Accordion>
+
+<Accordion title="Time-Series Forecasting">
+Generate predictions for different future scenarios:
+
+```python
+import numpy as np
+
+# Generate scenarios with varying conditions
+base_reading = get_current_reading()
+scenarios = []
+
+for hour in range(24):
+    # Simulate diurnal patterns
+    temp_offset = 5 * np.sin(hour * np.pi / 12)
+    humidity_offset = -10 * np.sin(hour * np.pi / 12)
+    
+    scenarios.append({
+        'id': f'forecast-hour-{hour}',
+        'temperature': base_reading['temperature'] + temp_offset,
+        'humidity': base_reading['humidity'] + humidity_offset,
+        'pm25': base_reading['pm25'],
+        'pm10': base_reading['pm10'],
+        'no2': base_reading['no2'],
+        'o3': base_reading['o3'],
+        'co': base_reading['co']
+    })
+
+# Get 24-hour forecast
+response = requests.post(url, json={'predictions': scenarios}, headers=headers)
+```
+</Accordion>
+
+## Best Practices
+
+<Note>
+Optimize batch processing for better performance and reliability.
+</Note>
+
+### Batch Size Optimization
+
+- Start with smaller batches (25-50) to test your integration
+- Increase batch size gradually to find optimal throughput
+- Consider network latency when choosing batch size
+- For real-time applications, prefer smaller batches (< 100)
+- For bulk processing, maximize batch size for your tier
+
+### Error Handling
+
+- Always set `fail_on_error: false` for production systems
+- Implement retry logic for failed predictions
+- Log failed predictions for later analysis
+- Monitor success rate across batches
+
+### Performance Tips
+
+- Enable `parallel_processing` for batches > 50 items
+- Group predictions by geographic region for better caching
+- Include the optional `id` field to track individual predictions
+- Reuse the same timestamp for simultaneous measurements
+
+<Warning>
+Avoid sending duplicate predictions in the same batch. This wastes resources and may affect rate limiting.
+</Warning>

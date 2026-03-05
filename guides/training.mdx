@@ -1,0 +1,539 @@
+---
+title: 'Training Models'
+description: 'Train custom AQI prediction models using various machine learning algorithms'
+---
+
+## Overview
+
+This guide covers training AQI prediction models using different machine learning approaches, from traditional algorithms to deep learning models. You'll learn how to configure training pipelines, optimize hyperparameters, and save trained models for deployment.
+
+## Prerequisites
+
+<Note>
+Before training models, ensure you have completed the [data preparation](/guides/data-preparation) steps and have training, validation, and test datasets ready.
+</Note>
+
+## Training Approaches
+
+AQI Predictor supports multiple model architectures:
+
+- **Gradient Boosting**: XGBoost, LightGBM (recommended for structured data)
+- **Random Forests**: Robust ensemble method
+- **Neural Networks**: Deep learning for complex patterns
+- **LSTM**: Recurrent networks for temporal sequences
+
+## Quick Start Training
+
+<Steps>
+  <Step title="Load Prepared Data">
+    Load the processed datasets created during data preparation.
+
+    ```python
+    import pandas as pd
+    import numpy as np
+    import joblib
+    from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+
+    # Load datasets
+    train_df = pd.read_parquet('data/processed/train.parquet')
+    val_df = pd.read_parquet('data/processed/val.parquet')
+    test_df = pd.read_parquet('data/processed/test.parquet')
+
+    # Separate features and target
+    X_train = train_df.drop('aqi', axis=1)
+    y_train = train_df['aqi']
+
+    X_val = val_df.drop('aqi', axis=1)
+    y_val = val_df['aqi']
+
+    X_test = test_df.drop('aqi', axis=1)
+    y_test = test_df['aqi']
+
+    print(f"Training samples: {len(X_train)}")
+    print(f"Validation samples: {len(X_val)}")
+    print(f"Features: {len(X_train.columns)}")
+    ```
+  </Step>
+
+  <Step title="Train Baseline Model">
+    Start with a simple baseline to establish performance expectations.
+
+    ```python
+    from sklearn.ensemble import RandomForestRegressor
+
+    # Simple Random Forest baseline
+    baseline_model = RandomForestRegressor(
+        n_estimators=100,
+        max_depth=10,
+        random_state=42,
+        n_jobs=-1
+    )
+
+    print("Training baseline model...")
+    baseline_model.fit(X_train, y_train)
+
+    # Evaluate on validation set
+    val_pred = baseline_model.predict(X_val)
+    val_rmse = np.sqrt(mean_squared_error(y_val, val_pred))
+    val_mae = mean_absolute_error(y_val, val_pred)
+    val_r2 = r2_score(y_val, val_pred)
+
+    print(f"\nBaseline Performance:")
+    print(f"  RMSE: {val_rmse:.2f}")
+    print(f"  MAE: {val_mae:.2f}")
+    print(f"  R²: {val_r2:.3f}")
+    ```
+
+    <Tip>
+    A baseline model helps you understand if more complex models provide meaningful improvements. Aim for RMSE < 15 for good AQI predictions.
+    </Tip>
+  </Step>
+</Steps>
+
+## Advanced Training Methods
+
+### XGBoost with Hyperparameter Tuning
+
+XGBoost typically provides the best performance for AQI prediction.
+
+<CodeGroup>
+```python Basic XGBoost
+import xgboost as xgb
+
+# Prepare DMatrix for XGBoost
+dtrain = xgb.DMatrix(X_train, label=y_train)
+dval = xgb.DMatrix(X_val, label=y_val)
+
+# Training parameters
+params = {
+    'objective': 'reg:squarederror',
+    'max_depth': 8,
+    'learning_rate': 0.05,
+    'subsample': 0.8,
+    'colsample_bytree': 0.8,
+    'min_child_weight': 3,
+    'gamma': 0.1,
+    'reg_alpha': 0.1,
+    'reg_lambda': 1.0,
+    'seed': 42
+}
+
+# Train with early stopping
+evals = [(dtrain, 'train'), (dval, 'val')]
+model = xgb.train(
+    params,
+    dtrain,
+    num_boost_round=1000,
+    evals=evals,
+    early_stopping_rounds=50,
+    verbose_eval=50
+)
+
+print(f"Best iteration: {model.best_iteration}")
+print(f"Best score: {model.best_score:.4f}")
+```
+
+```python Hyperparameter Tuning
+from sklearn.model_selection import RandomizedSearchCV
+from xgboost import XGBRegressor
+from scipy.stats import uniform, randint
+
+# Define parameter search space
+param_distributions = {
+    'max_depth': randint(3, 12),
+    'learning_rate': uniform(0.01, 0.3),
+    'n_estimators': randint(100, 1000),
+    'subsample': uniform(0.6, 0.4),
+    'colsample_bytree': uniform(0.6, 0.4),
+    'min_child_weight': randint(1, 10),
+    'gamma': uniform(0, 0.5),
+    'reg_alpha': uniform(0, 1),
+    'reg_lambda': uniform(0, 2)
+}
+
+# Create base model
+base_model = XGBRegressor(
+    objective='reg:squarederror',
+    seed=42,
+    n_jobs=-1
+)
+
+# Random search
+random_search = RandomizedSearchCV(
+    base_model,
+    param_distributions=param_distributions,
+    n_iter=50,
+    scoring='neg_mean_squared_error',
+    cv=3,
+    verbose=2,
+    random_state=42,
+    n_jobs=-1
+)
+
+print("Starting hyperparameter search...")
+random_search.fit(X_train, y_train)
+
+print(f"\nBest parameters: {random_search.best_params_}")
+print(f"Best CV score: {np.sqrt(-random_search.best_score_):.2f}")
+
+# Get best model
+best_model = random_search.best_estimator_
+```
+
+```python Cross-Validation
+from sklearn.model_selection import TimeSeriesSplit
+import xgboost as xgb
+
+def train_with_cv(X, y, n_splits=5):
+    """Train with time series cross-validation"""
+    tscv = TimeSeriesSplit(n_splits=n_splits)
+    cv_scores = []
+    
+    for fold, (train_idx, val_idx) in enumerate(tscv.split(X)):
+        print(f"\nFold {fold + 1}/{n_splits}")
+        
+        X_train_fold = X.iloc[train_idx]
+        y_train_fold = y.iloc[train_idx]
+        X_val_fold = X.iloc[val_idx]
+        y_val_fold = y.iloc[val_idx]
+        
+        # Train model
+        dtrain = xgb.DMatrix(X_train_fold, label=y_train_fold)
+        dval = xgb.DMatrix(X_val_fold, label=y_val_fold)
+        
+        params = {
+            'objective': 'reg:squarederror',
+            'max_depth': 8,
+            'learning_rate': 0.05,
+            'subsample': 0.8,
+            'colsample_bytree': 0.8
+        }
+        
+        model = xgb.train(
+            params,
+            dtrain,
+            num_boost_round=500,
+            evals=[(dval, 'val')],
+            early_stopping_rounds=30,
+            verbose_eval=False
+        )
+        
+        # Evaluate
+        val_pred = model.predict(dval)
+        rmse = np.sqrt(mean_squared_error(y_val_fold, val_pred))
+        cv_scores.append(rmse)
+        print(f"  Validation RMSE: {rmse:.2f}")
+    
+    print(f"\nAverage CV RMSE: {np.mean(cv_scores):.2f} ± {np.std(cv_scores):.2f}")
+    return cv_scores
+
+# Run cross-validation
+cv_scores = train_with_cv(X_train, y_train, n_splits=5)
+```
+</CodeGroup>
+
+### LightGBM for Fast Training
+
+LightGBM is faster than XGBoost and often achieves similar performance.
+
+```python
+import lightgbm as lgb
+
+# Prepare datasets
+train_data = lgb.Dataset(X_train, label=y_train)
+val_data = lgb.Dataset(X_val, label=y_val, reference=train_data)
+
+# LightGBM parameters
+params = {
+    'objective': 'regression',
+    'metric': 'rmse',
+    'boosting_type': 'gbdt',
+    'num_leaves': 63,
+    'learning_rate': 0.05,
+    'feature_fraction': 0.8,
+    'bagging_fraction': 0.8,
+    'bagging_freq': 5,
+    'min_child_samples': 20,
+    'lambda_l1': 0.1,
+    'lambda_l2': 1.0,
+    'verbose': -1,
+    'seed': 42
+}
+
+# Train model
+print("Training LightGBM model...")
+lgb_model = lgb.train(
+    params,
+    train_data,
+    num_boost_round=1000,
+    valid_sets=[train_data, val_data],
+    valid_names=['train', 'val'],
+    callbacks=[
+        lgb.early_stopping(stopping_rounds=50),
+        lgb.log_evaluation(period=50)
+    ]
+)
+
+print(f"\nBest iteration: {lgb_model.best_iteration}")
+print(f"Best score: {lgb_model.best_score['val']['rmse']:.4f}")
+
+# Feature importance
+importance = pd.DataFrame({
+    'feature': X_train.columns,
+    'importance': lgb_model.feature_importance()
+}).sort_values('importance', ascending=False)
+
+print("\nTop 10 Important Features:")
+print(importance.head(10))
+```
+
+### Deep Learning with Neural Networks
+
+For complex non-linear patterns, neural networks can be effective.
+
+```python
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras import layers, callbacks
+
+# Build neural network
+def build_nn_model(input_dim, hidden_units=[256, 128, 64]):
+    model = keras.Sequential([
+        layers.Input(shape=(input_dim,)),
+        layers.BatchNormalization(),
+        
+        layers.Dense(hidden_units[0], activation='relu'),
+        layers.Dropout(0.3),
+        layers.BatchNormalization(),
+        
+        layers.Dense(hidden_units[1], activation='relu'),
+        layers.Dropout(0.2),
+        layers.BatchNormalization(),
+        
+        layers.Dense(hidden_units[2], activation='relu'),
+        layers.Dropout(0.1),
+        
+        layers.Dense(1, activation='linear')
+    ])
+    
+    model.compile(
+        optimizer=keras.optimizers.Adam(learning_rate=0.001),
+        loss='mse',
+        metrics=['mae']
+    )
+    
+    return model
+
+# Create and train model
+nn_model = build_nn_model(input_dim=X_train.shape[1])
+
+print(nn_model.summary())
+
+# Callbacks
+early_stop = callbacks.EarlyStopping(
+    monitor='val_loss',
+    patience=20,
+    restore_best_weights=True
+)
+
+reduce_lr = callbacks.ReduceLROnPlateau(
+    monitor='val_loss',
+    factor=0.5,
+    patience=10,
+    min_lr=1e-6
+)
+
+model_checkpoint = callbacks.ModelCheckpoint(
+    'models/nn_model_best.keras',
+    monitor='val_loss',
+    save_best_only=True
+)
+
+# Train
+history = nn_model.fit(
+    X_train, y_train,
+    validation_data=(X_val, y_val),
+    epochs=200,
+    batch_size=256,
+    callbacks=[early_stop, reduce_lr, model_checkpoint],
+    verbose=1
+)
+
+print(f"\nBest validation loss: {min(history.history['val_loss']):.4f}")
+```
+
+### LSTM for Temporal Sequences
+
+LSTM networks can capture long-term temporal dependencies.
+
+```python
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import LSTM, Dense, Dropout
+
+def create_sequences(X, y, sequence_length=24):
+    """Create sequences for LSTM input"""
+    X_seq, y_seq = [], []
+    
+    for i in range(len(X) - sequence_length):
+        X_seq.append(X[i:i+sequence_length])
+        y_seq.append(y[i+sequence_length])
+    
+    return np.array(X_seq), np.array(y_seq)
+
+# Prepare sequences (24 hours of history)
+sequence_length = 24
+X_train_seq, y_train_seq = create_sequences(X_train.values, y_train.values, sequence_length)
+X_val_seq, y_val_seq = create_sequences(X_val.values, y_val.values, sequence_length)
+
+print(f"Sequence shape: {X_train_seq.shape}")
+
+# Build LSTM model
+lstm_model = Sequential([
+    LSTM(128, return_sequences=True, input_shape=(sequence_length, X_train.shape[1])),
+    Dropout(0.3),
+    LSTM(64, return_sequences=False),
+    Dropout(0.2),
+    Dense(32, activation='relu'),
+    Dense(1)
+])
+
+lstm_model.compile(
+    optimizer='adam',
+    loss='mse',
+    metrics=['mae']
+)
+
+print(lstm_model.summary())
+
+# Train LSTM
+history = lstm_model.fit(
+    X_train_seq, y_train_seq,
+    validation_data=(X_val_seq, y_val_seq),
+    epochs=100,
+    batch_size=128,
+    callbacks=[early_stop, reduce_lr],
+    verbose=1
+)
+```
+
+## Model Ensemble
+
+Combine multiple models for improved predictions.
+
+```python
+class AQIEnsemble:
+    def __init__(self, models, weights=None):
+        self.models = models
+        self.weights = weights if weights else [1.0/len(models)] * len(models)
+    
+    def predict(self, X):
+        predictions = []
+        for model, weight in zip(self.models, self.weights):
+            if hasattr(model, 'predict_proba'):
+                pred = model.predict(X)
+            else:
+                pred = model.predict(xgb.DMatrix(X) if 'xgb' in str(type(model)) else X)
+            predictions.append(pred * weight)
+        
+        return np.sum(predictions, axis=0)
+
+# Create ensemble
+ensemble = AQIEnsemble(
+    models=[xgb_model, lgb_model, baseline_model],
+    weights=[0.5, 0.3, 0.2]
+)
+
+# Evaluate ensemble
+ensemble_pred = ensemble.predict(X_val)
+ensemble_rmse = np.sqrt(mean_squared_error(y_val, ensemble_pred))
+ensemble_mae = mean_absolute_error(y_val, ensemble_pred)
+
+print(f"\nEnsemble Performance:")
+print(f"  RMSE: {ensemble_rmse:.2f}")
+print(f"  MAE: {ensemble_mae:.2f}")
+```
+
+## Save Trained Models
+
+<Steps>
+  <Step title="Save Model Artifacts">
+    ```python
+    import joblib
+    import os
+
+    # Create models directory
+    os.makedirs('models', exist_ok=True)
+
+    # Save XGBoost
+    xgb_model.save_model('models/xgboost_model.json')
+
+    # Save LightGBM
+    lgb_model.save_model('models/lightgbm_model.txt')
+
+    # Save sklearn models
+    joblib.dump(baseline_model, 'models/random_forest_model.pkl')
+
+    # Save neural network
+    nn_model.save('models/neural_network_model.keras')
+
+    # Save LSTM
+    lstm_model.save('models/lstm_model.keras')
+
+    print("All models saved successfully!")
+    ```
+  </Step>
+
+  <Step title="Save Model Metadata">
+    ```python
+    import json
+    from datetime import datetime
+
+    # Model metadata
+    metadata = {
+        'training_date': datetime.now().isoformat(),
+        'train_samples': len(X_train),
+        'val_samples': len(X_val),
+        'features': X_train.columns.tolist(),
+        'models': {
+            'xgboost': {
+                'rmse': float(np.sqrt(mean_squared_error(y_val, xgb_model.predict(xgb.DMatrix(X_val))))),
+                'mae': float(mean_absolute_error(y_val, xgb_model.predict(xgb.DMatrix(X_val)))),
+                'best_iteration': int(xgb_model.best_iteration)
+            },
+            'lightgbm': {
+                'rmse': lgb_model.best_score['val']['rmse'],
+                'best_iteration': int(lgb_model.best_iteration)
+            }
+        }
+    }
+
+    with open('models/metadata.json', 'w') as f:
+        json.dump(metadata, f, indent=2)
+
+    print("Metadata saved!")
+    ```
+  </Step>
+</Steps>
+
+<Warning>
+Always version your models and track their performance metrics. Use tools like MLflow or Weights & Biases for experiment tracking in production environments.
+</Warning>
+
+## Training Best Practices
+
+<Accordion title="Optimization Tips">
+1. **Start simple**: Begin with baseline models before trying complex architectures
+2. **Monitor overfitting**: Always validate on hold-out data
+3. **Feature importance**: Analyze which features drive predictions
+4. **Early stopping**: Prevent overfitting by stopping when validation metrics plateau
+5. **Regularization**: Use L1/L2 regularization and dropout to improve generalization
+6. **Cross-validation**: Use time-series CV for robust performance estimates
+7. **Ensemble**: Combine multiple models for better predictions
+</Accordion>
+
+## Next Steps
+
+After training your models:
+- [Evaluate model performance](/guides/evaluation)
+- [Deploy for inference](/guides/inference)
+- [Monitor predictions in production](/api-reference/monitoring)

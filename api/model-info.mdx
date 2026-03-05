@@ -1,0 +1,530 @@
+---
+title: 'Model Information'
+description: 'Retrieve information about the current ML model version, capabilities, and training data'
+---
+
+## Endpoint
+
+```
+GET /api/v1/model/info
+```
+
+Retrieve detailed information about the machine learning model currently in use, including version, training data statistics, supported features, and performance characteristics.
+
+## Authentication
+
+This endpoint requires authentication. Include your API key in the `X-API-Key` header.
+
+See [Authentication](/api/authentication) for details.
+
+## Request Parameters
+
+This endpoint accepts no request parameters. It's a simple GET request.
+
+## Response Fields
+
+<ResponseField name="success" type="boolean">
+  Indicates if the request was successful.
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  Contains detailed model information.
+  
+  <ResponseField name="data.model_version" type="string">
+    Current model version identifier.
+  </ResponseField>
+  
+  <ResponseField name="data.model_type" type="string">
+    Type of machine learning model (e.g., "gradient_boosted_ensemble").
+  </ResponseField>
+  
+  <ResponseField name="data.deployed_at" type="string">
+    ISO 8601 timestamp when this model version was deployed.
+  </ResponseField>
+  
+  <ResponseField name="data.training_data" type="object">
+    Information about the training dataset.
+    
+    <ResponseField name="data.training_data.samples" type="integer">
+      Number of training samples used.
+    </ResponseField>
+    
+    <ResponseField name="data.training_data.time_range" type="object">
+      Time period covered by training data.
+    </ResponseField>
+    
+    <ResponseField name="data.training_data.geographic_coverage" type="array">
+      Regions included in training data.
+    </ResponseField>
+  </ResponseField>
+  
+  <ResponseField name="data.performance_metrics" type="object">
+    Model performance metrics from validation.
+    
+    <ResponseField name="data.performance_metrics.mae" type="number">
+      Mean Absolute Error on validation set.
+    </ResponseField>
+    
+    <ResponseField name="data.performance_metrics.rmse" type="number">
+      Root Mean Square Error on validation set.
+    </ResponseField>
+    
+    <ResponseField name="data.performance_metrics.r2_score" type="number">
+      R² score indicating prediction accuracy (0-1).
+    </ResponseField>
+  </ResponseField>
+  
+  <ResponseField name="data.features" type="object">
+    Input features and their importance.
+  </ResponseField>
+  
+  <ResponseField name="data.supported_ranges" type="object">
+    Valid input ranges for each parameter.
+  </ResponseField>
+  
+  <ResponseField name="data.capabilities" type="array">
+    List of model capabilities and features.
+  </ResponseField>
+</ResponseField>
+
+<ResponseField name="timestamp" type="string">
+  ISO 8601 timestamp of the response.
+</ResponseField>
+
+## Example Request
+
+<CodeGroup>
+
+```bash cURL
+curl -X GET https://api.aqipredictor.com/api/v1/model/info \
+  -H "X-API-Key: aqp_prod_1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p"
+```
+
+```python Python
+import requests
+
+url = "https://api.aqipredictor.com/api/v1/model/info"
+api_key = "aqp_prod_1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p"
+
+headers = {
+    "X-API-Key": api_key
+}
+
+response = requests.get(url, headers=headers)
+model_info = response.json()
+
+print(f"Model Version: {model_info['data']['model_version']}")
+print(f"Model Type: {model_info['data']['model_type']}")
+print(f"R² Score: {model_info['data']['performance_metrics']['r2_score']:.4f}")
+print(f"\nSupported Capabilities:")
+for capability in model_info['data']['capabilities']:
+    print(f"  - {capability}")
+```
+
+```javascript JavaScript
+const url = 'https://api.aqipredictor.com/api/v1/model/info';
+const apiKey = 'aqp_prod_1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p';
+
+fetch(url, {
+  method: 'GET',
+  headers: {
+    'X-API-Key': apiKey
+  }
+})
+  .then(response => response.json())
+  .then(data => {
+    console.log(`Model Version: ${data.data.model_version}`);
+    console.log(`Model Type: ${data.data.model_type}`);
+    console.log(`R² Score: ${data.data.performance_metrics.r2_score.toFixed(4)}`);
+    console.log('\nSupported Capabilities:');
+    data.data.capabilities.forEach(cap => console.log(`  - ${cap}`));
+  })
+  .catch(error => console.error('Error:', error));
+```
+
+```go Go
+package main
+
+import (
+    "encoding/json"
+    "fmt"
+    "io"
+    "net/http"
+)
+
+func main() {
+    url := "https://api.aqipredictor.com/api/v1/model/info"
+    apiKey := "aqp_prod_1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p"
+
+    req, _ := http.NewRequest("GET", url, nil)
+    req.Header.Add("X-API-Key", apiKey)
+
+    client := &http.Client{}
+    resp, err := client.Do(req)
+    if err != nil {
+        panic(err)
+    }
+    defer resp.Body.Close()
+
+    body, _ := io.ReadAll(resp.Body)
+    
+    var result map[string]interface{}
+    json.Unmarshal(body, &result)
+    
+    data := result["data"].(map[string]interface{})
+    fmt.Printf("Model Version: %s\n", data["model_version"])
+    fmt.Printf("Model Type: %s\n", data["model_type"])
+}
+```
+
+</CodeGroup>
+
+## Example Response
+
+```json 200 Success
+{
+  "success": true,
+  "data": {
+    "model_version": "2.4.1",
+    "model_type": "gradient_boosted_ensemble",
+    "model_name": "AQI Predictor XGBoost v2.4",
+    "deployed_at": "2026-02-15T10:00:00Z",
+    "training_data": {
+      "samples": 2847563,
+      "time_range": {
+        "start": "2020-01-01T00:00:00Z",
+        "end": "2026-01-31T23:59:59Z"
+      },
+      "geographic_coverage": [
+        "North America",
+        "Europe",
+        "East Asia",
+        "Southeast Asia",
+        "Australia"
+      ],
+      "cities": 1847,
+      "monitoring_stations": 5432
+    },
+    "performance_metrics": {
+      "mae": 4.82,
+      "rmse": 7.34,
+      "r2_score": 0.9347,
+      "median_absolute_error": 3.21,
+      "mean_confidence": 0.88,
+      "validation_set_size": 284756
+    },
+    "features": {
+      "required": [
+        "temperature",
+        "humidity",
+        "pm25",
+        "pm10",
+        "no2",
+        "o3",
+        "co"
+      ],
+      "optional": [
+        "pressure",
+        "wind_speed",
+        "location",
+        "timestamp"
+      ],
+      "feature_importance": {
+        "pm25": 0.342,
+        "o3": 0.218,
+        "pm10": 0.176,
+        "no2": 0.124,
+        "co": 0.067,
+        "temperature": 0.038,
+        "humidity": 0.035
+      }
+    },
+    "supported_ranges": {
+      "temperature": { "min": -50, "max": 60, "unit": "°C" },
+      "humidity": { "min": 0, "max": 100, "unit": "%" },
+      "pressure": { "min": 900, "max": 1100, "unit": "hPa" },
+      "wind_speed": { "min": 0, "max": 200, "unit": "km/h" },
+      "pm25": { "min": 0, "max": 500, "unit": "µg/m³" },
+      "pm10": { "min": 0, "max": 600, "unit": "µg/m³" },
+      "no2": { "min": 0, "max": 500, "unit": "ppb" },
+      "o3": { "min": 0, "max": 400, "unit": "ppb" },
+      "co": { "min": 0, "max": 50, "unit": "ppm" }
+    },
+    "capabilities": [
+      "real_time_prediction",
+      "batch_processing",
+      "confidence_scoring",
+      "pollutant_breakdown",
+      "multi_region_support",
+      "seasonal_adjustment",
+      "urban_rural_differentiation"
+    ],
+    "preprocessing": {
+      "normalization": "z-score",
+      "missing_value_handling": "interpolation",
+      "outlier_detection": "enabled"
+    },
+    "update_schedule": {
+      "frequency": "monthly",
+      "next_update": "2026-04-01T00:00:00Z",
+      "update_type": "incremental_training"
+    },
+    "limitations": [
+      "Reduced accuracy for extreme weather conditions",
+      "Limited training data for polar regions",
+      "Performance degrades with sensor measurement errors > 20%"
+    ]
+  },
+  "timestamp": "2026-03-05T14:30:00Z"
+}
+```
+
+## Understanding Model Information
+
+### Model Version
+
+The model version follows semantic versioning (MAJOR.MINOR.PATCH):
+
+- **MAJOR**: Breaking changes to API or model architecture
+- **MINOR**: New features or significant retraining
+- **PATCH**: Bug fixes and minor improvements
+
+<Note>
+Check the model version periodically to ensure you're aware of updates that might affect your predictions.
+</Note>
+
+### Performance Metrics
+
+<Accordion title="Mean Absolute Error (MAE)">
+  Average absolute difference between predicted and actual AQI values.
+  
+  - **Current**: 4.82 AQI points
+  - **Interpretation**: On average, predictions are within ±5 AQI points
+  - **Lower is better**
+</Accordion>
+
+<Accordion title="Root Mean Square Error (RMSE)">
+  Standard deviation of prediction errors, giving more weight to large errors.
+  
+  - **Current**: 7.34 AQI points
+  - **Interpretation**: Typical prediction variation is around 7 points
+  - **Lower is better**
+</Accordion>
+
+<Accordion title="R² Score">
+  Coefficient of determination, indicating how well the model explains variance.
+  
+  - **Current**: 0.9347 (93.47%)
+  - **Range**: 0 to 1
+  - **Interpretation**: Model explains 93.47% of AQI variance
+  - **Higher is better** (1.0 is perfect)
+</Accordion>
+
+### Feature Importance
+
+Feature importance values indicate how much each input parameter contributes to predictions:
+
+| Feature | Importance | Interpretation |
+|---------|------------|----------------|
+| PM2.5 | 34.2% | Most critical pollutant for AQI |
+| O3 | 21.8% | Secondary air quality indicator |
+| PM10 | 17.6% | Important particulate measure |
+| NO2 | 12.4% | Significant urban pollutant |
+| CO | 6.7% | Moderate influence |
+| Temperature | 3.8% | Indirect effect on pollutant behavior |
+| Humidity | 3.5% | Minor environmental factor |
+
+<Warning>
+Ensure accurate measurements for high-importance features (PM2.5, O3, PM10) to achieve the best prediction quality.
+</Warning>
+
+### Geographic Coverage
+
+The model is trained on data from multiple regions:
+
+- **North America**: 1,245 stations across US, Canada, Mexico
+- **Europe**: 2,187 stations covering EU and UK
+- **East Asia**: 1,432 stations in China, Japan, Korea
+- **Southeast Asia**: 389 stations in major cities
+- **Australia**: 179 stations across major regions
+
+<Note>
+Predictions are most accurate for locations similar to those in the training data. Remote or polar regions may have reduced accuracy.
+</Note>
+
+## Model Capabilities
+
+### Real-time Prediction
+
+Optimized for low-latency predictions (< 100ms average response time).
+
+### Batch Processing
+
+Efficiently handles large batch requests with parallel processing.
+
+### Confidence Scoring
+
+Provides confidence metrics for each prediction to assess reliability.
+
+### Pollutant Breakdown
+
+Calculates individual AQI contributions from each pollutant.
+
+### Seasonal Adjustment
+
+Accounts for seasonal patterns in air quality (winter inversions, summer ozone, etc.).
+
+### Urban-Rural Differentiation
+
+Adapts predictions based on location characteristics when location data is provided.
+
+## Model Updates
+
+### Update Schedule
+
+The model is retrained monthly with new data:
+
+- **Frequency**: Monthly incremental training
+- **Next Update**: April 1, 2026
+- **Update Type**: Incremental (preserves existing knowledge)
+
+### Changelog
+
+<Accordion title="Version 2.4.1 (Current)">
+  **Released**: February 15, 2026
+  
+  **Improvements**:
+  - Enhanced accuracy for high-humidity conditions (+8% improvement)
+  - Added 423,000 new training samples from January 2026
+  - Improved confidence scoring algorithm
+  - Fixed edge case with negative temperature predictions
+  
+  **Performance**:
+  - MAE: 4.82 (improved from 5.21)
+  - R² Score: 0.9347 (improved from 0.9289)
+</Accordion>
+
+<Accordion title="Version 2.4.0">
+  **Released**: January 12, 2026
+  
+  **New Features**:
+  - Added support for wind speed parameter
+  - Improved seasonal adjustment algorithm
+  - Enhanced urban-rural differentiation
+  
+  **Performance**:
+  - MAE: 5.21
+  - R² Score: 0.9289
+</Accordion>
+
+<Accordion title="Version 2.3.5">
+  **Released**: December 1, 2025
+  
+  **Improvements**:
+  - Expanded training data to 2.4M+ samples
+  - Added 312 new monitoring stations
+  - Improved handling of extreme weather conditions
+  
+  **Performance**:
+  - MAE: 5.67
+  - R² Score: 0.9201
+</Accordion>
+
+## Using Model Information
+
+### Version Tracking
+
+```python
+import requests
+
+def check_model_version(api_key):
+    """Check if model has been updated"""
+    response = requests.get(
+        "https://api.aqipredictor.com/api/v1/model/info",
+        headers={"X-API-Key": api_key}
+    )
+    data = response.json()
+    
+    current_version = data['data']['model_version']
+    stored_version = load_stored_version()  # Your storage logic
+    
+    if current_version != stored_version:
+        print(f"Model updated: {stored_version} → {current_version}")
+        save_version(current_version)
+        return True
+    return False
+```
+
+### Feature Validation
+
+```python
+def validate_input_ranges(data, model_info):
+    """Validate inputs against model's supported ranges"""
+    ranges = model_info['data']['supported_ranges']
+    errors = []
+    
+    for param, value in data.items():
+        if param in ranges:
+            if value < ranges[param]['min'] or value > ranges[param]['max']:
+                errors.append(
+                    f"{param} value {value} outside range "
+                    f"[{ranges[param]['min']}, {ranges[param]['max']}]"
+                )
+    
+    return errors
+```
+
+### Performance Monitoring
+
+```javascript
+function assessModelPerformance(modelInfo) {
+  const metrics = modelInfo.data.performance_metrics;
+  
+  // Check if model meets quality thresholds
+  const quality = {
+    excellent: metrics.r2_score > 0.93 && metrics.mae < 5.0,
+    good: metrics.r2_score > 0.90 && metrics.mae < 7.0,
+    acceptable: metrics.r2_score > 0.85 && metrics.mae < 10.0
+  };
+  
+  if (quality.excellent) {
+    return 'Model performance is excellent';
+  } else if (quality.good) {
+    return 'Model performance is good';
+  } else if (quality.acceptable) {
+    return 'Model performance is acceptable';
+  } else {
+    return 'Model performance below expectations';
+  }
+}
+```
+
+## Best Practices
+
+<Note>
+Leverage model information to optimize your integration and improve prediction quality.
+</Note>
+
+### Cache Model Information
+
+- Cache model info for 24 hours to reduce API calls
+- Refresh when you detect a version change
+- Store feature importance for input validation
+
+### Monitor Model Updates
+
+- Check for updates weekly or before critical operations
+- Review changelogs to understand improvements
+- Test your integration after major version updates
+
+### Optimize Input Quality
+
+- Prioritize accuracy for high-importance features (PM2.5, O3)
+- Validate inputs against supported ranges
+- Include optional parameters (location, timestamp) for better accuracy
+
+### Understand Limitations
+
+- Be aware of geographic coverage gaps
+- Account for reduced accuracy in extreme conditions
+- Monitor confidence scores and flag low-confidence predictions

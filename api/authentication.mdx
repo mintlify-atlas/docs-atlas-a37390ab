@@ -1,0 +1,287 @@
+---
+title: 'Authentication'
+description: 'Learn how to authenticate your API requests using API keys'
+---
+
+## Overview
+
+The AQI Predictor API uses API keys to authenticate requests. All API endpoints require authentication except for public status endpoints.
+
+## Obtaining an API Key
+
+1. Sign up for an account at [https://dashboard.aqipredictor.com](https://dashboard.aqipredictor.com)
+2. Navigate to **Settings** → **API Keys**
+3. Click **Generate New API Key**
+4. Copy your API key immediately (it won't be shown again)
+5. Store it securely in your application's environment variables
+
+<Warning>
+Never commit API keys to version control or expose them in client-side code.
+</Warning>
+
+## Authentication Method
+
+Include your API key in the `X-API-Key` header with every request:
+
+```bash
+curl https://api.aqipredictor.com/api/v1/model/info \
+  -H "X-API-Key: your_api_key_here"
+```
+
+### Header Format
+
+<ParamField header="X-API-Key" type="string" required>
+  Your unique API key. Format: `aqp_` followed by 32 alphanumeric characters.
+  
+  Example: `aqp_1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p`
+</ParamField>
+
+## API Key Types
+
+The AQI Predictor platform supports two types of API keys:
+
+<Accordion title="Production Keys">
+  **Production Keys** are used for live applications and are subject to your account's rate limits and billing.
+  
+  - Prefix: `aqp_prod_`
+  - Environment: Production API (`https://api.aqipredictor.com`)
+  - Rate limits: Based on your subscription tier
+  - Usage is billed according to your plan
+</Accordion>
+
+<Accordion title="Test Keys">
+  **Test Keys** are used for development and testing environments with relaxed constraints.
+  
+  - Prefix: `aqp_test_`
+  - Environment: Sandbox API (`https://sandbox-api.aqipredictor.com`)
+  - Rate limits: 100 requests per hour
+  - Returns synthetic predictions for testing
+  - No billing charges
+</Accordion>
+
+## Authentication Example
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://api.aqipredictor.com/api/v1/predict \
+  -H "X-API-Key: aqp_prod_1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "temperature": 25.5,
+    "humidity": 65,
+    "pm25": 35.2,
+    "pm10": 48.7,
+    "no2": 25.3,
+    "o3": 45.1,
+    "co": 0.8
+  }'
+```
+
+```python Python
+import requests
+
+api_key = "aqp_prod_1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p"
+url = "https://api.aqipredictor.com/api/v1/predict"
+
+headers = {
+    "X-API-Key": api_key,
+    "Content-Type": "application/json"
+}
+
+data = {
+    "temperature": 25.5,
+    "humidity": 65,
+    "pm25": 35.2,
+    "pm10": 48.7,
+    "no2": 25.3,
+    "o3": 45.1,
+    "co": 0.8
+}
+
+response = requests.post(url, json=data, headers=headers)
+print(response.json())
+```
+
+```javascript JavaScript
+const apiKey = 'aqp_prod_1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p';
+const url = 'https://api.aqipredictor.com/api/v1/predict';
+
+const data = {
+  temperature: 25.5,
+  humidity: 65,
+  pm25: 35.2,
+  pm10: 48.7,
+  no2: 25.3,
+  o3: 45.1,
+  co: 0.8
+};
+
+fetch(url, {
+  method: 'POST',
+  headers: {
+    'X-API-Key': apiKey,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify(data)
+})
+  .then(response => response.json())
+  .then(data => console.log(data));
+```
+
+</CodeGroup>
+
+## Authentication Errors
+
+### Missing API Key
+
+If you don't include the `X-API-Key` header:
+
+```json
+{
+  "success": false,
+  "error": {
+    "code": "MISSING_API_KEY",
+    "message": "API key is required. Include X-API-Key header in your request."
+  },
+  "timestamp": "2026-03-05T14:30:00Z"
+}
+```
+
+HTTP Status: `401 Unauthorized`
+
+### Invalid API Key
+
+If your API key is invalid, expired, or revoked:
+
+```json
+{
+  "success": false,
+  "error": {
+    "code": "INVALID_API_KEY",
+    "message": "The provided API key is invalid or has been revoked.",
+    "details": {
+      "key_prefix": "aqp_prod_1a2b"
+    }
+  },
+  "timestamp": "2026-03-05T14:30:00Z"
+}
+```
+
+HTTP Status: `401 Unauthorized`
+
+### Insufficient Permissions
+
+If your API key doesn't have permission for the requested operation:
+
+```json
+{
+  "success": false,
+  "error": {
+    "code": "INSUFFICIENT_PERMISSIONS",
+    "message": "Your API key does not have permission to access this resource.",
+    "details": {
+      "required_permission": "batch_predict",
+      "current_tier": "free"
+    }
+  },
+  "timestamp": "2026-03-05T14:30:00Z"
+}
+```
+
+HTTP Status: `403 Forbidden`
+
+## Security Best Practices
+
+<Note>
+Follow these security guidelines to protect your API keys and data.
+</Note>
+
+### Store Keys Securely
+
+Use environment variables or secure secret management:
+
+```bash .env
+AQI_API_KEY=aqp_prod_1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p
+```
+
+```python Python
+import os
+
+api_key = os.environ.get('AQI_API_KEY')
+```
+
+### Rotate Keys Regularly
+
+1. Generate a new API key in the dashboard
+2. Update your application with the new key
+3. Test thoroughly in your staging environment
+4. Revoke the old key once migration is complete
+
+### Use Different Keys for Different Environments
+
+- Development: Test keys only
+- Staging: Separate production key
+- Production: Primary production key
+- CI/CD: Dedicated key with monitoring
+
+### Monitor API Key Usage
+
+Track your API key usage in the dashboard:
+
+- Request volume and patterns
+- Error rates
+- Geographic distribution
+- Unusual activity alerts
+
+### Revoke Compromised Keys
+
+If you suspect a key has been compromised:
+
+1. **Immediately** revoke it in the dashboard
+2. Generate a new key
+3. Update your applications
+4. Review access logs for suspicious activity
+5. Contact support if you detect unauthorized usage
+
+## Rate Limiting by API Key
+
+Each API key has rate limits based on your subscription tier:
+
+```json Response Headers
+X-RateLimit-Limit: 60
+X-RateLimit-Remaining: 58
+X-RateLimit-Reset: 1709650800
+```
+
+<ResponseField name="X-RateLimit-Limit" type="integer">
+  Maximum number of requests allowed per minute for your API key.
+</ResponseField>
+
+<ResponseField name="X-RateLimit-Remaining" type="integer">
+  Number of requests remaining in the current rate limit window.
+</ResponseField>
+
+<ResponseField name="X-RateLimit-Reset" type="integer">
+  Unix timestamp when the rate limit window resets.
+</ResponseField>
+
+When you exceed the rate limit:
+
+```json
+{
+  "success": false,
+  "error": {
+    "code": "RATE_LIMIT_EXCEEDED",
+    "message": "Rate limit exceeded. Please wait before making additional requests.",
+    "details": {
+      "retry_after": 45,
+      "limit": 60,
+      "window": "1 minute"
+    }
+  },
+  "timestamp": "2026-03-05T14:30:00Z"
+}
+```
+
+HTTP Status: `429 Too Many Requests`

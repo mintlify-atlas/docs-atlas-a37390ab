@@ -1,0 +1,515 @@
+---
+title: "Installation"
+description: "Install and configure AQI Predictor for your environment"
+---
+
+## System Requirements
+
+Before installing AQI Predictor, ensure your system meets the following requirements:
+
+<CardGroup cols={2}>
+  <Card title="Python Version" icon="python">
+    Python 3.8 or higher
+  </Card>
+  <Card title="Operating System" icon="computer">
+    Linux, macOS, or Windows
+  </Card>
+  <Card title="Memory" icon="memory">
+    Minimum 4GB RAM (8GB recommended)
+  </Card>
+  <Card title="Storage" icon="hard-drive">
+    At least 500MB free disk space
+  </Card>
+</CardGroup>
+
+## Basic Installation
+
+Install AQI Predictor using your preferred package manager:
+
+<CodeGroup>
+```bash pip
+pip install aqi-predictor
+```
+
+```bash conda
+conda install -c conda-forge aqi-predictor
+```
+
+```bash poetry
+poetry add aqi-predictor
+```
+
+```bash pipenv
+pipenv install aqi-predictor
+```
+</CodeGroup>
+
+Verify the installation:
+
+```bash
+python -c "import aqi_predictor; print(aqi_predictor.__version__)"
+```
+
+<Accordion title="Expected Output">
+```
+1.2.3
+```
+</Accordion>
+
+## Installation Options
+
+### Minimal Installation
+
+Install only the core prediction functionality without training dependencies:
+
+```bash
+pip install aqi-predictor --no-deps
+pip install numpy pandas requests
+```
+
+This is ideal for production environments where you only need to make predictions using pre-trained models.
+
+### Full Installation
+
+Install with all dependencies for model training, evaluation, and visualization:
+
+```bash
+pip install aqi-predictor[full]
+```
+
+This includes:
+- Deep learning frameworks (TensorFlow, PyTorch)
+- Advanced ML libraries (XGBoost, LightGBM)
+- Visualization tools (Matplotlib, Seaborn, Plotly)
+- Data processing utilities
+
+### Development Installation
+
+For contributors or advanced users who want to modify the source code:
+
+```bash
+git clone https://github.com/git-devisha/aqi-predictor.git
+cd aqi-predictor
+pip install -e ".[dev]"
+```
+
+This installs the package in editable mode with development dependencies (pytest, black, mypy, etc.).
+
+## GPU Support
+
+For faster model training, install GPU-accelerated versions of deep learning frameworks:
+
+<Tabs>
+  <Tab title="TensorFlow GPU">
+    ```bash
+    # For CUDA 11.2+
+    pip install aqi-predictor
+    pip install tensorflow[and-cuda]
+    
+    # Verify GPU is available
+    python -c "import tensorflow as tf; print(tf.config.list_physical_devices('GPU'))"
+    ```
+  </Tab>
+  
+  <Tab title="PyTorch GPU">
+    ```bash
+    # For CUDA 11.8
+    pip install aqi-predictor
+    pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118
+    
+    # Verify GPU is available
+    python -c "import torch; print(torch.cuda.is_available())"
+    ```
+  </Tab>
+  
+  <Tab title="Metal (Apple Silicon)">
+    ```bash
+    # For M1/M2 Macs
+    pip install aqi-predictor
+    pip install tensorflow-metal
+    
+    # Verify Metal is available
+    python -c "import tensorflow as tf; print(tf.config.list_physical_devices())"
+    ```
+  </Tab>
+</Tabs>
+
+<Note>
+GPU support significantly speeds up training but is not required for making predictions with pre-trained models.
+</Note>
+
+## Docker Installation
+
+Run AQI Predictor in a Docker container for isolated and reproducible environments:
+
+### Using Pre-built Image
+
+```bash
+docker pull aqipredictor/aqi-predictor:latest
+docker run -it --rm aqipredictor/aqi-predictor:latest python
+```
+
+### Building from Source
+
+```dockerfile Dockerfile
+FROM python:3.10-slim
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install AQI Predictor
+RUN pip install --no-cache-dir aqi-predictor[full]
+
+# Copy your application code
+COPY . /app
+
+CMD ["python", "your_script.py"]
+```
+
+Build and run:
+
+```bash
+docker build -t my-aqi-app .
+docker run -e AQI_API_KEY=your_key my-aqi-app
+```
+
+### Docker Compose
+
+For more complex setups with databases or multiple services:
+
+```yaml docker-compose.yml
+version: '3.8'
+
+services:
+  aqi-predictor:
+    image: aqipredictor/aqi-predictor:latest
+    environment:
+      - AQI_API_KEY=${AQI_API_KEY}
+    volumes:
+      - ./models:/app/models
+      - ./data:/app/data
+    ports:
+      - "8000:8000"
+    command: python api_server.py
+```
+
+Run with:
+
+```bash
+docker-compose up
+```
+
+## Configuration
+
+### Environment Variables
+
+Configure AQI Predictor using environment variables:
+
+```bash .env
+# API Configuration
+AQI_API_KEY=your_api_key_here
+AQI_API_URL=https://api.aqipredictor.com/v1
+AQI_TIMEOUT=30
+
+# Model Configuration
+AQI_MODEL_PATH=/path/to/models
+AQI_DEFAULT_MODEL=lstm_v2
+
+# Logging
+AQI_LOG_LEVEL=INFO
+AQI_LOG_FILE=/var/log/aqi-predictor.log
+```
+
+Load environment variables in your code:
+
+```python
+from aqi_predictor import AQIClient
+import os
+
+client = AQIClient(
+    api_key=os.getenv("AQI_API_KEY"),
+    api_url=os.getenv("AQI_API_URL"),
+    timeout=int(os.getenv("AQI_TIMEOUT", 30))
+)
+```
+
+### Configuration File
+
+Create a configuration file for persistent settings:
+
+```yaml config.yaml
+api:
+  key: your_api_key_here
+  url: https://api.aqipredictor.com/v1
+  timeout: 30
+  retry_attempts: 3
+
+model:
+  path: ./models
+  default: lstm_v2
+  cache_predictions: true
+
+logging:
+  level: INFO
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: ./logs/aqi-predictor.log
+```
+
+Load the configuration:
+
+```python
+from aqi_predictor import AQIClient
+import yaml
+
+with open("config.yaml") as f:
+    config = yaml.safe_load(f)
+
+client = AQIClient(
+    api_key=config["api"]["key"],
+    api_url=config["api"]["url"],
+    timeout=config["api"]["timeout"]
+)
+```
+
+## Dependency Management
+
+### Managing Dependencies with Poetry
+
+If you use Poetry for dependency management:
+
+```toml pyproject.toml
+[tool.poetry.dependencies]
+python = "^3.8"
+aqi-predictor = "^1.2.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.0"
+black = "^23.0"
+```
+
+Install:
+
+```bash
+poetry install
+```
+
+### Managing Dependencies with Conda
+
+Create a conda environment:
+
+```yaml environment.yml
+name: aqi-predictor
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10
+  - pip
+  - pip:
+    - aqi-predictor
+    - python-dotenv
+```
+
+Create and activate:
+
+```bash
+conda env create -f environment.yml
+conda activate aqi-predictor
+```
+
+## Upgrading
+
+### Upgrade to Latest Version
+
+```bash
+pip install --upgrade aqi-predictor
+```
+
+### Upgrade to Specific Version
+
+```bash
+pip install aqi-predictor==1.2.3
+```
+
+### Check Current Version
+
+```python
+import aqi_predictor
+print(aqi_predictor.__version__)
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="ImportError: No module named 'aqi_predictor'">
+    **Solution:**
+    1. Verify installation: `pip list | grep aqi-predictor`
+    2. Check Python environment: `which python`
+    3. Reinstall: `pip install --force-reinstall aqi-predictor`
+  </Accordion>
+  
+  <Accordion title="SSL Certificate Verification Failed">
+    **Solution:**
+    
+    If you encounter SSL errors when installing:
+    
+    ```bash
+    pip install --trusted-host pypi.org --trusted-host files.pythonhosted.org aqi-predictor
+    ```
+    
+    Or upgrade pip and certificates:
+    
+    ```bash
+    pip install --upgrade pip certifi
+    ```
+  </Accordion>
+  
+  <Accordion title="TensorFlow/PyTorch Installation Issues">
+    **Solution:**
+    
+    Install deep learning frameworks separately:
+    
+    ```bash
+    # Install core package first
+    pip install aqi-predictor --no-deps
+    
+    # Install dependencies manually
+    pip install numpy pandas requests
+    pip install tensorflow  # or pytorch
+    ```
+  </Accordion>
+  
+  <Accordion title="Memory Error During Training">
+    **Solution:**
+    
+    Reduce batch size or use gradient checkpointing:
+    
+    ```python
+    from aqi_predictor import ModelTrainer
+    
+    trainer = ModelTrainer()
+    trainer.train(
+        batch_size=32,  # Reduce from default 128
+        gradient_checkpointing=True
+    )
+    ```
+  </Accordion>
+  
+  <Accordion title="Permission Denied on Linux/macOS">
+    **Solution:**
+    
+    Install in user directory:
+    
+    ```bash
+    pip install --user aqi-predictor
+    ```
+    
+    Or use a virtual environment:
+    
+    ```bash
+    python -m venv venv
+    source venv/bin/activate
+    pip install aqi-predictor
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Platform-Specific Notes
+
+### Windows
+
+On Windows, you may need to install Visual C++ Build Tools:
+
+1. Download from [Microsoft C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
+2. Install "Desktop development with C++" workload
+3. Restart your terminal and retry installation
+
+### macOS
+
+On macOS, install Xcode Command Line Tools:
+
+```bash
+xcode-select --install
+```
+
+### Linux
+
+On Linux, install build dependencies:
+
+<CodeGroup>
+```bash Ubuntu/Debian
+sudo apt-get update
+sudo apt-get install -y python3-dev build-essential
+```
+
+```bash CentOS/RHEL
+sudo yum install python3-devel gcc gcc-c++
+```
+
+```bash Arch Linux
+sudo pacman -S python gcc
+```
+</CodeGroup>
+
+## Offline Installation
+
+For air-gapped environments without internet access:
+
+1. Download the package and dependencies on a machine with internet:
+
+```bash
+pip download aqi-predictor -d ./aqi-packages
+```
+
+2. Transfer the `aqi-packages` directory to the offline machine
+
+3. Install from the local directory:
+
+```bash
+pip install --no-index --find-links=./aqi-packages aqi-predictor
+```
+
+## Uninstallation
+
+Remove AQI Predictor from your system:
+
+```bash
+pip uninstall aqi-predictor
+```
+
+Remove configuration files and cached models:
+
+```bash
+rm -rf ~/.aqi-predictor
+```
+
+## Next Steps
+
+Now that you have AQI Predictor installed:
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Make your first prediction in 5 minutes
+  </Card>
+  
+  <Card title="Configuration" icon="gear" href="/guides/data-preparation">
+    Learn about data preparation and configuration
+  </Card>
+  
+  <Card title="API Reference" icon="code" href="/api/overview">
+    Explore the complete API documentation
+  </Card>
+  
+  <Card title="Examples" icon="code-branch" href="/guides/inference">
+    View code examples and usage patterns
+  </Card>
+</CardGroup>
+
+<Tip>
+**Having issues?** Check our [GitHub Issues](https://github.com/git-devisha/aqi-predictor/issues) or reach out on our community forum.
+</Tip>

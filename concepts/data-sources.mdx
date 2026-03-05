@@ -1,0 +1,315 @@
+---
+title: 'Data Sources'
+description: 'Environmental data sources, pollutants, and parameters for AQI prediction'
+---
+
+## Overview
+
+Accurate AQI prediction depends on comprehensive, high-quality data from multiple sources. This page covers the types of data required, common sources, and how to structure your datasets for training and inference.
+
+<Note>
+The quality of your predictions is directly related to the quality and completeness of your input data. Missing data, sensor errors, and temporal gaps can significantly impact model performance.
+</Note>
+
+## Primary Data Categories
+
+### 1. Air Quality Measurements
+
+The core of any AQI prediction system is historical air quality data from monitoring stations.
+
+<CardGroup cols={2}>
+  <Card title="PM2.5" icon="smog" color="#e74c3c">
+    **Particulate Matter < 2.5μm**
+    
+    Fine particles from combustion, vehicle emissions, and industrial processes. Most health-relevant pollutant.
+    
+    - Unit: μg/m³
+    - Typical range: 0-500+
+    - Key driver of AQI
+  </Card>
+  
+  <Card title="PM10" icon="cloud" color="#e67e22">
+    **Particulate Matter < 10μm**
+    
+    Coarse particles from dust, pollen, and mold. Includes PM2.5 fraction.
+    
+    - Unit: μg/m³
+    - Typical range: 0-600+
+    - Often correlated with PM2.5
+  </Card>
+  
+  <Card title="NO2" icon="industry" color="#9b59b6">
+    **Nitrogen Dioxide**
+    
+    Produced by vehicle engines and power plants. Respiratory irritant.
+    
+    - Unit: ppb or μg/m³
+    - Typical range: 0-200 ppb
+    - Traffic-related pollutant
+  </Card>
+  
+  <Card title="O3" icon="sun" color="#3498db">
+    **Ozone**
+    
+    Secondary pollutant formed by photochemical reactions. Worse in summer.
+    
+    - Unit: ppb or μg/m³
+    - Typical range: 0-150 ppb
+    - Peaks during afternoon
+  </Card>
+  
+  <Card title="SO2" icon="fire" color="#95a5a6">
+    **Sulfur Dioxide**
+    
+    From fossil fuel combustion at power plants and refineries.
+    
+    - Unit: ppb or μg/m³
+    - Typical range: 0-100 ppb
+    - Industrial pollutant
+  </Card>
+  
+  <Card title="CO" icon="car" color="#34495e">
+    **Carbon Monoxide**
+    
+    Colorless, odorless gas from incomplete combustion.
+    
+    - Unit: ppm or mg/m³
+    - Typical range: 0-10 ppm
+    - Vehicle emissions
+  </Card>
+</CardGroup>
+
+### 2. Meteorological Data
+
+Weather conditions critically influence pollutant dispersion, transformation, and accumulation.
+
+<AccordionGroup>
+  <Accordion title="Wind Speed & Direction">
+    **Impact:** Disperses pollutants; high winds reduce concentrations
+    
+    - **Wind Speed:** m/s or mph
+    - **Wind Direction:** Degrees (0-360) or cardinal directions
+    - **Importance:** Primary dispersion mechanism
+    - **Typical patterns:** Calm winds → higher pollution; strong winds → lower pollution
+    
+    Models should capture both speed magnitude and directional components (u and v vectors).
+  </Accordion>
+  
+  <Accordion title="Temperature">
+    **Impact:** Affects pollutant chemistry and boundary layer height
+    
+    - **Unit:** °C or °F
+    - **Importance:** Influences ozone formation, vertical mixing
+    - **Typical patterns:**
+      - Higher temps → more ozone formation
+      - Temperature inversions → trapped pollutants
+      - Daily cycles affect mixing height
+  </Accordion>
+  
+  <Accordion title="Relative Humidity">
+    **Impact:** Influences particle growth and secondary pollutant formation
+    
+    - **Unit:** Percentage (0-100%)
+    - **Importance:** Affects PM2.5 mass, visibility
+    - **Typical patterns:**
+      - High humidity → particle hygroscopic growth
+      - Affects chemical reactions in atmosphere
+  </Accordion>
+  
+  <Accordion title="Atmospheric Pressure">
+    **Impact:** Indicates weather systems and stability
+    
+    - **Unit:** hPa or mmHg
+    - **Importance:** High pressure systems → stagnant conditions
+    - **Typical patterns:**
+      - High pressure → poor ventilation, pollution buildup
+      - Low pressure → better mixing, precipitation
+  </Accordion>
+  
+  <Accordion title="Precipitation">
+    **Impact:** Wet deposition removes pollutants from air
+    
+    - **Unit:** mm or inches
+    - **Importance:** Rain cleanses air, reduces most pollutants
+    - **Typical patterns:** Precipitation events cause sharp drops in PM concentrations
+  </Accordion>
+  
+  <Accordion title="Solar Radiation">
+    **Impact:** Drives photochemical reactions
+    
+    - **Unit:** W/m²
+    - **Importance:** Critical for ozone formation
+    - **Typical patterns:** Peak radiation → peak ozone production (with time lag)
+  </Accordion>
+</AccordionGroup>
+
+### 3. Temporal Features
+
+Time-based patterns are essential for capturing recurring pollution cycles.
+
+<Tabs>
+  <Tab title="Hourly Patterns">
+    **Rush Hour Effects**
+    
+    Traffic-related pollutants (NO2, CO, PM2.5) show clear peaks during morning (7-9 AM) and evening (5-7 PM) rush hours in urban areas.
+    
+    **Ozone Diurnal Cycle**
+    
+    Ozone concentrations typically peak in the afternoon (2-4 PM) due to photochemical production.
+    
+    **Recommended Features:**
+    - Hour of day (0-23)
+    - Cyclical encoding: sin(2π × hour/24), cos(2π × hour/24)
+  </Tab>
+  
+  <Tab title="Daily Patterns">
+    **Weekday vs Weekend**
+    
+    Weekdays show higher traffic-related pollution. Weekends often have different emission patterns.
+    
+    **Weekly Cycles**
+    
+    Industrial activities may follow weekly schedules.
+    
+    **Recommended Features:**
+    - Day of week (0-6)
+    - Is weekday/weekend (binary)
+    - Cyclical encoding: sin(2π × day/7), cos(2π × day/7)
+  </Tab>
+  
+  <Tab title="Seasonal Patterns">
+    **Winter vs Summer**
+    
+    - Winter: Higher PM2.5 from heating, temperature inversions
+    - Summer: Higher ozone from photochemical reactions
+    
+    **Seasonal Emissions**
+    
+    Heating in winter, cooling in summer, agricultural activities in spring/fall.
+    
+    **Recommended Features:**
+    - Month (1-12)
+    - Season (categorical or cyclical)
+    - Cyclical encoding: sin(2π × day_of_year/365), cos(2π × day_of_year/365)
+  </Tab>
+</Tabs>
+
+### 4. Spatial Features (Optional)
+
+For multi-station or spatial models, location-based features can improve predictions.
+
+- **Station coordinates:** Latitude, longitude, elevation
+- **Land use:** Urban density, industrial zones, green space
+- **Traffic density:** Proximity to major roads, vehicle counts
+- **Topography:** Terrain features affecting air flow
+- **Population density:** Emission source indicator
+
+## Common Data Sources
+
+<Info>
+Data availability and quality vary by region. Check local environmental agencies for official monitoring data.
+</Info>
+
+### Air Quality Data Sources
+
+| Source | Coverage | Access | Notes |
+|--------|----------|--------|-------|
+| **EPA AirNow** (US) | United States | API, bulk download | Official US air quality data |
+| **OpenAQ** | Global | API, open data | Aggregated global air quality data |
+| **CPCB** (India) | India | Web portal, API | Central Pollution Control Board |
+| **EEA** | Europe | API, downloads | European Environment Agency |
+| **PurpleAir** | Global | API | Low-cost sensor network (requires calibration) |
+| **AQICN** | Global | API | World Air Quality Index Project |
+
+### Meteorological Data Sources
+
+| Source | Coverage | Access | Resolution |
+|--------|----------|--------|------------|
+| **NOAA** | US, Global | API, FTP | Hourly observations |
+| **OpenWeatherMap** | Global | API | Current & forecast |
+| **Weather Underground** | Global | API | Station-level data |
+| **ERA5 Reanalysis** | Global | Download | Hourly, gridded |
+| **ECMWF** | Global | API | Forecast data |
+| **Local Weather Services** | Regional | Varies | Often most accurate |
+
+## Data Requirements
+
+### Minimum Requirements
+
+<CardGroup cols={2}>
+  <Card title="For Training" icon="graduation-cap">
+    - At least 1-2 years of historical data
+    - Hourly or sub-hourly resolution
+    - At least PM2.5 or dominant local pollutant
+    - Basic meteorology (temp, wind, humidity)
+    - < 20% missing data
+  </Card>
+  
+  <Card title="For Inference" icon="brain">
+    - Recent pollutant measurements (lookback window)
+    - Current meteorological conditions
+    - Weather forecast (for longer horizons)
+    - Same features used in training
+  </Card>
+</CardGroup>
+
+### Recommended Best Practices
+
+<AccordionGroup>
+  <Accordion title="Data Quality Checks">
+    **Pre-processing validation:**
+    
+    - Check for physically impossible values (negative concentrations)
+    - Identify and flag sensor malfunctions (constant values, sudden spikes)
+    - Validate against neighboring stations
+    - Check for temporal consistency
+    - Document data quality flags
+  </Accordion>
+  
+  <Accordion title="Handling Missing Data">
+    **Strategies by scenario:**
+    
+    - **Small gaps (< 3 hours):** Linear interpolation
+    - **Moderate gaps (3-12 hours):** Use neighboring stations or advanced imputation
+    - **Large gaps (> 12 hours):** Exclude from training or use with caution
+    - **Systematic missing data:** May indicate sensor issues; investigate
+    
+    Always document imputation methods and mark imputed values.
+  </Accordion>
+  
+  <Accordion title="Data Alignment">
+    **Temporal synchronization:**
+    
+    - Align all data sources to common timestamps
+    - Handle timezone conversions carefully
+    - Account for averaging periods (1-hour mean, 8-hour mean, etc.)
+    - Match meteorological data to station locations
+    - Consider temporal lags between cause and effect
+  </Accordion>
+  
+  <Accordion title="Feature Scaling">
+    **Normalization approaches:**
+    
+    - **Min-Max Scaling:** Scale to [0,1] or [-1,1] range
+    - **Standardization:** Zero mean, unit variance (z-score)
+    - **Robust Scaling:** Use median and IQR (handles outliers)
+    
+    **Important:** Save scaling parameters from training data to apply consistently during inference.
+  </Accordion>
+</AccordionGroup>
+
+## Data Format
+
+AQI Predictor expects data in structured formats:
+
+```python
+# Example CSV structure
+timestamp,pm25,pm10,no2,o3,so2,co,temp,humidity,wind_speed,wind_dir,pressure
+2024-01-01 00:00:00,35.2,58.1,28.3,22.1,5.2,0.6,8.5,72,2.3,180,1013.2
+2024-01-01 01:00:00,38.7,62.3,31.2,19.8,5.8,0.7,8.1,75,1.8,165,1013.5
+...
+```
+
+<Note>
+**Next Steps:** Learn how this data feeds into machine learning models in [Model Architecture](/concepts/model-architecture).
+</Note>

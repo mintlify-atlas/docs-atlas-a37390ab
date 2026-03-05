@@ -1,0 +1,599 @@
+---
+title: 'Model Evaluation'
+description: 'Evaluate and analyze AQI prediction model performance and accuracy'
+---
+
+## Overview
+
+Proper evaluation is critical for understanding model performance, identifying weaknesses, and ensuring predictions are reliable. This guide covers comprehensive evaluation strategies for AQI prediction models.
+
+## Prerequisites
+
+<Note>
+You should have:
+- Trained models from the [training guide](/guides/training)
+- Test dataset that was held out during training
+- Understanding of AQI categories and their importance
+</Note>
+
+## Loading Test Data
+
+<Steps>
+  <Step title="Load Test Set">
+    ```python
+    import pandas as pd
+    import numpy as np
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+    from sklearn.metrics import (
+        mean_squared_error,
+        mean_absolute_error,
+        r2_score,
+        mean_absolute_percentage_error
+    )
+
+    # Set plotting style
+    sns.set_style('whitegrid')
+    plt.rcParams['figure.figsize'] = (12, 6)
+
+    # Load test data
+    test_df = pd.read_parquet('data/processed/test.parquet')
+    X_test = test_df.drop('aqi', axis=1)
+    y_test = test_df['aqi']
+
+    print(f"Test samples: {len(X_test)}")
+    print(f"AQI range: {y_test.min():.1f} - {y_test.max():.1f}")
+    print(f"AQI mean: {y_test.mean():.1f}")
+    ```
+  </Step>
+
+  <Step title="Generate Predictions">
+    ```python
+    import xgboost as xgb
+    import lightgbm as lgb
+    import joblib
+
+    # Load models
+    xgb_model = xgb.Booster()
+    xgb_model.load_model('models/xgboost_model.json')
+
+    lgb_model = lgb.Booster(model_file='models/lightgbm_model.txt')
+
+    rf_model = joblib.load('models/random_forest_model.pkl')
+
+    # Generate predictions
+    dtest = xgb.DMatrix(X_test)
+    xgb_pred = xgb_model.predict(dtest)
+    lgb_pred = lgb_model.predict(X_test)
+    rf_pred = rf_model.predict(X_test)
+
+    # Create predictions dataframe
+    predictions_df = pd.DataFrame({
+        'actual': y_test,
+        'xgboost': xgb_pred,
+        'lightgbm': lgb_pred,
+        'random_forest': rf_pred
+    })
+
+    print("Predictions generated for all models")
+    ```
+  </Step>
+</Steps>
+
+## Regression Metrics
+
+### Basic Metrics
+
+Evaluate standard regression performance metrics.
+
+```python
+def calculate_metrics(y_true, y_pred, model_name='Model'):
+    """
+    Calculate comprehensive regression metrics
+    """
+    rmse = np.sqrt(mean_squared_error(y_true, y_pred))
+    mae = mean_absolute_error(y_true, y_pred)
+    mape = mean_absolute_percentage_error(y_true, y_pred) * 100
+    r2 = r2_score(y_true, y_pred)
+    
+    # Additional metrics
+    residuals = y_true - y_pred
+    mse = mean_squared_error(y_true, y_pred)
+    
+    print(f"\n{model_name} Performance:")
+    print(f"  RMSE: {rmse:.2f}")
+    print(f"  MAE: {mae:.2f}")
+    print(f"  MAPE: {mape:.2f}%")
+    print(f"  R²: {r2:.4f}")
+    print(f"  MSE: {mse:.2f}")
+    
+    return {
+        'model': model_name,
+        'rmse': rmse,
+        'mae': mae,
+        'mape': mape,
+        'r2': r2,
+        'mse': mse
+    }
+
+# Evaluate all models
+metrics = []
+for model_name in ['xgboost', 'lightgbm', 'random_forest']:
+    m = calculate_metrics(
+        predictions_df['actual'],
+        predictions_df[model_name],
+        model_name.upper()
+    )
+    metrics.append(m)
+
+# Create metrics comparison table
+metrics_df = pd.DataFrame(metrics)
+print("\nModel Comparison:")
+print(metrics_df.to_string(index=False))
+```
+
+<Tip>
+For AQI prediction, RMSE < 15 indicates good performance, while RMSE < 10 is excellent.
+</Tip>
+
+### AQI Category Accuracy
+
+Evaluate how well predictions match AQI categories.
+
+```python
+def get_aqi_category(aqi_value):
+    """Map AQI value to category"""
+    if aqi_value <= 50:
+        return 'Good'
+    elif aqi_value <= 100:
+        return 'Moderate'
+    elif aqi_value <= 150:
+        return 'Unhealthy for Sensitive'
+    elif aqi_value <= 200:
+        return 'Unhealthy'
+    elif aqi_value <= 300:
+        return 'Very Unhealthy'
+    else:
+        return 'Hazardous'
+
+def evaluate_category_accuracy(y_true, y_pred, model_name='Model'):
+    """
+    Evaluate prediction accuracy at category level
+    """
+    true_categories = [get_aqi_category(v) for v in y_true]
+    pred_categories = [get_aqi_category(v) for v in y_pred]
+    
+    # Exact match accuracy
+    exact_match = np.mean([t == p for t, p in zip(true_categories, pred_categories)])
+    
+    # Within one category
+    category_order = ['Good', 'Moderate', 'Unhealthy for Sensitive', 
+                     'Unhealthy', 'Very Unhealthy', 'Hazardous']
+    
+    def category_distance(cat1, cat2):
+        return abs(category_order.index(cat1) - category_order.index(cat2))
+    
+    within_one = np.mean([
+        category_distance(t, p) <= 1 
+        for t, p in zip(true_categories, pred_categories)
+    ])
+    
+    print(f"\n{model_name} Category Accuracy:")
+    print(f"  Exact match: {exact_match*100:.1f}%")
+    print(f"  Within 1 category: {within_one*100:.1f}%")
+    
+    return exact_match, within_one, true_categories, pred_categories
+
+# Evaluate category accuracy for all models
+for model_name in ['xgboost', 'lightgbm', 'random_forest']:
+    evaluate_category_accuracy(
+        predictions_df['actual'],
+        predictions_df[model_name],
+        model_name.upper()
+    )
+```
+
+## Visualization
+
+### Prediction vs Actual Plot
+
+```python
+def plot_predictions_vs_actual(y_true, y_pred, model_name='Model'):
+    """
+    Scatter plot of predictions vs actual values
+    """
+    fig, ax = plt.subplots(figsize=(10, 10))
+    
+    # Scatter plot
+    ax.scatter(y_true, y_pred, alpha=0.5, s=20)
+    
+    # Perfect prediction line
+    min_val = min(y_true.min(), y_pred.min())
+    max_val = max(y_true.max(), y_pred.max())
+    ax.plot([min_val, max_val], [min_val, max_val], 'r--', lw=2, label='Perfect prediction')
+    
+    # Add AQI category boundaries
+    for threshold in [50, 100, 150, 200, 300]:
+        ax.axhline(threshold, color='gray', linestyle=':', alpha=0.3)
+        ax.axvline(threshold, color='gray', linestyle=':', alpha=0.3)
+    
+    ax.set_xlabel('Actual AQI', fontsize=12)
+    ax.set_ylabel('Predicted AQI', fontsize=12)
+    ax.set_title(f'{model_name} - Predictions vs Actual', fontsize=14)
+    ax.legend()
+    ax.grid(True, alpha=0.3)
+    
+    plt.tight_layout()
+    plt.savefig(f'evaluation/{model_name}_predictions_vs_actual.png', dpi=150)
+    plt.close()
+
+# Create plots for all models
+import os
+os.makedirs('evaluation', exist_ok=True)
+
+for model_name in ['xgboost', 'lightgbm', 'random_forest']:
+    plot_predictions_vs_actual(
+        predictions_df['actual'],
+        predictions_df[model_name],
+        model_name.upper()
+    )
+```
+
+### Residual Analysis
+
+```python
+def plot_residuals(y_true, y_pred, model_name='Model'):
+    """
+    Analyze prediction residuals
+    """
+    residuals = y_true - y_pred
+    
+    fig, axes = plt.subplots(2, 2, figsize=(15, 12))
+    
+    # 1. Residuals vs Predicted
+    axes[0, 0].scatter(y_pred, residuals, alpha=0.5, s=20)
+    axes[0, 0].axhline(0, color='red', linestyle='--', lw=2)
+    axes[0, 0].set_xlabel('Predicted AQI')
+    axes[0, 0].set_ylabel('Residuals')
+    axes[0, 0].set_title('Residuals vs Predicted')
+    axes[0, 0].grid(True, alpha=0.3)
+    
+    # 2. Residuals distribution
+    axes[0, 1].hist(residuals, bins=50, edgecolor='black', alpha=0.7)
+    axes[0, 1].axvline(0, color='red', linestyle='--', lw=2)
+    axes[0, 1].set_xlabel('Residuals')
+    axes[0, 1].set_ylabel('Frequency')
+    axes[0, 1].set_title(f'Residuals Distribution (μ={residuals.mean():.2f}, σ={residuals.std():.2f})')
+    axes[0, 1].grid(True, alpha=0.3)
+    
+    # 3. Q-Q plot
+    from scipy import stats
+    stats.probplot(residuals, dist="norm", plot=axes[1, 0])
+    axes[1, 0].set_title('Q-Q Plot')
+    axes[1, 0].grid(True, alpha=0.3)
+    
+    # 4. Residuals over time
+    axes[1, 1].plot(residuals.values, alpha=0.7, linewidth=0.5)
+    axes[1, 1].axhline(0, color='red', linestyle='--', lw=2)
+    axes[1, 1].fill_between(range(len(residuals)), 0, residuals.values, alpha=0.3)
+    axes[1, 1].set_xlabel('Sample Index')
+    axes[1, 1].set_ylabel('Residuals')
+    axes[1, 1].set_title('Residuals Over Time')
+    axes[1, 1].grid(True, alpha=0.3)
+    
+    plt.suptitle(f'{model_name} - Residual Analysis', fontsize=16, y=1.00)
+    plt.tight_layout()
+    plt.savefig(f'evaluation/{model_name}_residuals.png', dpi=150)
+    plt.close()
+
+# Generate residual plots
+for model_name in ['xgboost', 'lightgbm', 'random_forest']:
+    plot_residuals(
+        predictions_df['actual'],
+        predictions_df[model_name],
+        model_name.upper()
+    )
+```
+
+### Error Distribution by AQI Range
+
+```python
+def analyze_errors_by_range(y_true, y_pred, model_name='Model'):
+    """
+    Analyze prediction errors across different AQI ranges
+    """
+    errors = np.abs(y_true - y_pred)
+    
+    # Define AQI ranges
+    ranges = [
+        (0, 50, 'Good'),
+        (50, 100, 'Moderate'),
+        (100, 150, 'Unhealthy for Sensitive'),
+        (150, 200, 'Unhealthy'),
+        (200, 300, 'Very Unhealthy'),
+        (300, 500, 'Hazardous')
+    ]
+    
+    results = []
+    for low, high, category in ranges:
+        mask = (y_true >= low) & (y_true < high)
+        if mask.sum() > 0:
+            range_mae = errors[mask].mean()
+            range_rmse = np.sqrt(((y_true[mask] - y_pred[mask]) ** 2).mean())
+            count = mask.sum()
+            results.append({
+                'category': category,
+                'range': f'{low}-{high}',
+                'samples': count,
+                'mae': range_mae,
+                'rmse': range_rmse
+            })
+    
+    results_df = pd.DataFrame(results)
+    
+    print(f"\n{model_name} - Error Analysis by AQI Range:")
+    print(results_df.to_string(index=False))
+    
+    # Plot
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 5))
+    
+    x = range(len(results_df))
+    ax1.bar(x, results_df['mae'], alpha=0.7, color='steelblue')
+    ax1.set_xticks(x)
+    ax1.set_xticklabels(results_df['category'], rotation=45, ha='right')
+    ax1.set_ylabel('Mean Absolute Error')
+    ax1.set_title('MAE by AQI Category')
+    ax1.grid(True, alpha=0.3)
+    
+    ax2.bar(x, results_df['rmse'], alpha=0.7, color='coral')
+    ax2.set_xticks(x)
+    ax2.set_xticklabels(results_df['category'], rotation=45, ha='right')
+    ax2.set_ylabel('Root Mean Squared Error')
+    ax2.set_title('RMSE by AQI Category')
+    ax2.grid(True, alpha=0.3)
+    
+    plt.suptitle(f'{model_name} - Performance by Category', fontsize=14)
+    plt.tight_layout()
+    plt.savefig(f'evaluation/{model_name}_errors_by_range.png', dpi=150)
+    plt.close()
+    
+    return results_df
+
+# Analyze errors for best model
+error_analysis = analyze_errors_by_range(
+    predictions_df['actual'],
+    predictions_df['xgboost'],
+    'XGBoost'
+)
+```
+
+## Feature Importance Analysis
+
+```python
+def plot_feature_importance(model, feature_names, model_name='Model', top_n=20):
+    """
+    Visualize feature importance
+    """
+    # Get importance scores based on model type
+    if hasattr(model, 'get_score'):
+        # XGBoost
+        importance_dict = model.get_score(importance_type='gain')
+        importances = [importance_dict.get(f'f{i}', 0) for i in range(len(feature_names))]
+    elif hasattr(model, 'feature_importance'):
+        # LightGBM
+        importances = model.feature_importance()
+    else:
+        # Sklearn
+        importances = model.feature_importances_
+    
+    # Create dataframe
+    importance_df = pd.DataFrame({
+        'feature': feature_names,
+        'importance': importances
+    }).sort_values('importance', ascending=False)
+    
+    # Plot top N features
+    top_features = importance_df.head(top_n)
+    
+    plt.figure(figsize=(10, 8))
+    plt.barh(range(len(top_features)), top_features['importance'], alpha=0.7)
+    plt.yticks(range(len(top_features)), top_features['feature'])
+    plt.xlabel('Importance Score')
+    plt.title(f'{model_name} - Top {top_n} Most Important Features')
+    plt.gca().invert_yaxis()
+    plt.tight_layout()
+    plt.savefig(f'evaluation/{model_name}_feature_importance.png', dpi=150)
+    plt.close()
+    
+    print(f"\n{model_name} - Top 10 Features:")
+    print(top_features.head(10).to_string(index=False))
+    
+    return importance_df
+
+# Analyze feature importance
+feature_names = X_test.columns.tolist()
+importance = plot_feature_importance(
+    xgb_model,
+    feature_names,
+    'XGBoost',
+    top_n=20
+)
+```
+
+## Time Series Performance
+
+```python
+def evaluate_temporal_performance(y_true, y_pred, timestamps=None):
+    """
+    Evaluate how prediction accuracy varies over time
+    """
+    if timestamps is None:
+        timestamps = pd.date_range(start='2024-01-01', periods=len(y_true), freq='h')
+    
+    df = pd.DataFrame({
+        'timestamp': timestamps,
+        'actual': y_true,
+        'predicted': y_pred,
+        'error': np.abs(y_true - y_pred)
+    })
+    
+    # Daily aggregation
+    daily_metrics = df.set_index('timestamp').resample('D').agg({
+        'error': 'mean',
+        'actual': 'mean',
+        'predicted': 'mean'
+    })
+    
+    # Plot
+    fig, axes = plt.subplots(2, 1, figsize=(15, 10))
+    
+    # Predictions over time
+    axes[0].plot(df['timestamp'], df['actual'], label='Actual', alpha=0.7, linewidth=1)
+    axes[0].plot(df['timestamp'], df['predicted'], label='Predicted', alpha=0.7, linewidth=1)
+    axes[0].set_ylabel('AQI')
+    axes[0].set_title('Actual vs Predicted AQI Over Time')
+    axes[0].legend()
+    axes[0].grid(True, alpha=0.3)
+    
+    # Daily error
+    axes[1].plot(daily_metrics.index, daily_metrics['error'], color='red', linewidth=2)
+    axes[1].fill_between(daily_metrics.index, 0, daily_metrics['error'], alpha=0.3, color='red')
+    axes[1].set_xlabel('Date')
+    axes[1].set_ylabel('Mean Absolute Error')
+    axes[1].set_title('Daily Prediction Error')
+    axes[1].grid(True, alpha=0.3)
+    
+    plt.tight_layout()
+    plt.savefig('evaluation/temporal_performance.png', dpi=150)
+    plt.close()
+    
+    return daily_metrics
+
+# Evaluate temporal performance
+temporal_metrics = evaluate_temporal_performance(
+    predictions_df['actual'],
+    predictions_df['xgboost']
+)
+```
+
+## Model Comparison
+
+```python
+def compare_models(predictions_df, model_names):
+    """
+    Comprehensive comparison of multiple models
+    """
+    fig, axes = plt.subplots(2, 2, figsize=(16, 12))
+    
+    # 1. MAE comparison
+    maes = [mean_absolute_error(predictions_df['actual'], predictions_df[m]) 
+            for m in model_names]
+    axes[0, 0].bar(range(len(model_names)), maes, alpha=0.7)
+    axes[0, 0].set_xticks(range(len(model_names)))
+    axes[0, 0].set_xticklabels([m.upper() for m in model_names], rotation=45)
+    axes[0, 0].set_ylabel('Mean Absolute Error')
+    axes[0, 0].set_title('MAE Comparison')
+    axes[0, 0].grid(True, alpha=0.3)
+    
+    # 2. RMSE comparison
+    rmses = [np.sqrt(mean_squared_error(predictions_df['actual'], predictions_df[m])) 
+             for m in model_names]
+    axes[0, 1].bar(range(len(model_names)), rmses, alpha=0.7, color='coral')
+    axes[0, 1].set_xticks(range(len(model_names)))
+    axes[0, 1].set_xticklabels([m.upper() for m in model_names], rotation=45)
+    axes[0, 1].set_ylabel('Root Mean Squared Error')
+    axes[0, 1].set_title('RMSE Comparison')
+    axes[0, 1].grid(True, alpha=0.3)
+    
+    # 3. R² comparison
+    r2_scores = [r2_score(predictions_df['actual'], predictions_df[m]) 
+                 for m in model_names]
+    axes[1, 0].bar(range(len(model_names)), r2_scores, alpha=0.7, color='green')
+    axes[1, 0].set_xticks(range(len(model_names)))
+    axes[1, 0].set_xticklabels([m.upper() for m in model_names], rotation=45)
+    axes[1, 0].set_ylabel('R² Score')
+    axes[1, 0].set_title('R² Comparison')
+    axes[1, 0].grid(True, alpha=0.3)
+    
+    # 4. Error distribution comparison
+    for model_name in model_names:
+        errors = predictions_df['actual'] - predictions_df[model_name]
+        axes[1, 1].hist(errors, bins=50, alpha=0.5, label=model_name.upper())
+    axes[1, 1].axvline(0, color='red', linestyle='--', lw=2)
+    axes[1, 1].set_xlabel('Prediction Error')
+    axes[1, 1].set_ylabel('Frequency')
+    axes[1, 1].set_title('Error Distribution')
+    axes[1, 1].legend()
+    axes[1, 1].grid(True, alpha=0.3)
+    
+    plt.suptitle('Model Comparison', fontsize=16)
+    plt.tight_layout()
+    plt.savefig('evaluation/model_comparison.png', dpi=150)
+    plt.close()
+    
+    print("Model comparison plot saved!")
+
+compare_models(predictions_df, ['xgboost', 'lightgbm', 'random_forest'])
+```
+
+<Warning>
+Always evaluate on held-out test data that was never seen during training or hyperparameter tuning to get unbiased performance estimates.
+</Warning>
+
+## Evaluation Report
+
+```python
+def generate_evaluation_report(predictions_df, model_names, output_file='evaluation/report.txt'):
+    """
+    Generate comprehensive evaluation report
+    """
+    with open(output_file, 'w') as f:
+        f.write("="*80 + "\n")
+        f.write("AQI PREDICTOR - MODEL EVALUATION REPORT\n")
+        f.write("="*80 + "\n\n")
+        
+        f.write(f"Test Set Size: {len(predictions_df)}\n")
+        f.write(f"AQI Range: {predictions_df['actual'].min():.1f} - {predictions_df['actual'].max():.1f}\n")
+        f.write(f"Mean AQI: {predictions_df['actual'].mean():.1f}\n\n")
+        
+        for model_name in model_names:
+            f.write("-" * 80 + "\n")
+            f.write(f"{model_name.upper()}\n")
+            f.write("-" * 80 + "\n")
+            
+            y_pred = predictions_df[model_name]
+            y_true = predictions_df['actual']
+            
+            # Metrics
+            rmse = np.sqrt(mean_squared_error(y_true, y_pred))
+            mae = mean_absolute_error(y_true, y_pred)
+            mape = mean_absolute_percentage_error(y_true, y_pred) * 100
+            r2 = r2_score(y_true, y_pred)
+            
+            f.write(f"RMSE: {rmse:.2f}\n")
+            f.write(f"MAE: {mae:.2f}\n")
+            f.write(f"MAPE: {mape:.2f}%\n")
+            f.write(f"R²: {r2:.4f}\n\n")
+            
+            # Category accuracy
+            true_cats = [get_aqi_category(v) for v in y_true]
+            pred_cats = [get_aqi_category(v) for v in y_pred]
+            exact_match = np.mean([t == p for t, p in zip(true_cats, pred_cats)])
+            
+            f.write(f"Category Accuracy: {exact_match*100:.1f}%\n\n")
+        
+        f.write("="*80 + "\n")
+        f.write("Report generation complete\n")
+    
+    print(f"Evaluation report saved to {output_file}")
+
+generate_evaluation_report(predictions_df, ['xgboost', 'lightgbm', 'random_forest'])
+```
+
+## Next Steps
+
+After evaluating your models:
+- [Deploy best model for inference](/guides/inference)
+- [Set up monitoring](/api-reference/monitoring)
+- Iterate on feature engineering if performance is suboptimal
+- Consider ensemble methods to combine model strengths

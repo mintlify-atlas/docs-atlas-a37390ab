@@ -1,0 +1,431 @@
+---
+title: 'Predict AQI'
+description: 'Generate real-time Air Quality Index predictions for a single location'
+---
+
+## Endpoint
+
+```
+POST /api/v1/predict
+```
+
+Generates an Air Quality Index (AQI) prediction based on current environmental and pollutant measurements. The machine learning model analyzes multiple input parameters to provide an accurate AQI forecast along with confidence metrics.
+
+## Authentication
+
+This endpoint requires authentication. Include your API key in the `X-API-Key` header.
+
+See [Authentication](/api/authentication) for details.
+
+## Request Parameters
+
+### Environmental Parameters
+
+<ParamField body="temperature" type="number" required>
+  Ambient temperature in degrees Celsius.
+  
+  - Range: -50 to 60
+  - Example: `25.5`
+</ParamField>
+
+<ParamField body="humidity" type="number" required>
+  Relative humidity percentage.
+  
+  - Range: 0 to 100
+  - Example: `65`
+</ParamField>
+
+<ParamField body="pressure" type="number">
+  Atmospheric pressure in hectopascals (hPa).
+  
+  - Range: 900 to 1100
+  - Default: 1013.25 (sea level standard)
+  - Example: `1015.3`
+</ParamField>
+
+<ParamField body="wind_speed" type="number">
+  Wind speed in kilometers per hour.
+  
+  - Range: 0 to 200
+  - Default: 0
+  - Example: `12.5`
+</ParamField>
+
+### Pollutant Parameters
+
+<ParamField body="pm25" type="number" required>
+  Particulate Matter 2.5 concentration in micrograms per cubic meter (µg/m³).
+  
+  - Range: 0 to 500
+  - Example: `35.2`
+</ParamField>
+
+<ParamField body="pm10" type="number" required>
+  Particulate Matter 10 concentration in micrograms per cubic meter (µg/m³).
+  
+  - Range: 0 to 600
+  - Example: `48.7`
+</ParamField>
+
+<ParamField body="no2" type="number" required>
+  Nitrogen Dioxide concentration in parts per billion (ppb).
+  
+  - Range: 0 to 500
+  - Example: `25.3`
+</ParamField>
+
+<ParamField body="o3" type="number" required>
+  Ozone concentration in parts per billion (ppb).
+  
+  - Range: 0 to 400
+  - Example: `45.1`
+</ParamField>
+
+<ParamField body="co" type="number" required>
+  Carbon Monoxide concentration in parts per million (ppm).
+  
+  - Range: 0 to 50
+  - Example: `0.8`
+</ParamField>
+
+### Optional Parameters
+
+<ParamField body="location" type="object">
+  Geographic location information for the prediction.
+  
+  ```json
+  {
+    "latitude": 37.7749,
+    "longitude": -122.4194,
+    "city": "San Francisco",
+    "country": "US"
+  }
+  ```
+</ParamField>
+
+<ParamField body="timestamp" type="string">
+  ISO 8601 timestamp for the measurement. Defaults to current time.
+  
+  - Example: `2026-03-05T14:30:00Z`
+</ParamField>
+
+<ParamField body="include_breakdown" type="boolean">
+  Include detailed pollutant-level AQI breakdown in response.
+  
+  - Default: `false`
+</ParamField>
+
+## Response Fields
+
+<ResponseField name="success" type="boolean">
+  Indicates if the prediction was successful.
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  Contains the prediction results.
+  
+  <ResponseField name="data.aqi" type="integer">
+    Predicted Air Quality Index value (0-500).
+  </ResponseField>
+  
+  <ResponseField name="data.category" type="string">
+    AQI category: `good`, `moderate`, `unhealthy_sensitive`, `unhealthy`, `very_unhealthy`, or `hazardous`.
+  </ResponseField>
+  
+  <ResponseField name="data.dominant_pollutant" type="string">
+    Primary pollutant contributing to the AQI value.
+  </ResponseField>
+  
+  <ResponseField name="data.confidence" type="number">
+    Model confidence score (0-1). Higher values indicate greater confidence.
+  </ResponseField>
+  
+  <ResponseField name="data.health_recommendation" type="string">
+    General health advice based on the predicted AQI level.
+  </ResponseField>
+  
+  <ResponseField name="data.breakdown" type="object">
+    Individual AQI values for each pollutant (only if `include_breakdown` is true).
+    
+    ```json
+    {
+      "pm25": 58,
+      "pm10": 45,
+      "no2": 32,
+      "o3": 67,
+      "co": 12
+    }
+    ```
+  </ResponseField>
+</ResponseField>
+
+<ResponseField name="timestamp" type="string">
+  ISO 8601 timestamp of the prediction.
+</ResponseField>
+
+## Example Request
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://api.aqipredictor.com/api/v1/predict \
+  -H "X-API-Key: aqp_prod_1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "temperature": 25.5,
+    "humidity": 65,
+    "pressure": 1015.3,
+    "wind_speed": 12.5,
+    "pm25": 35.2,
+    "pm10": 48.7,
+    "no2": 25.3,
+    "o3": 45.1,
+    "co": 0.8,
+    "location": {
+      "latitude": 37.7749,
+      "longitude": -122.4194,
+      "city": "San Francisco",
+      "country": "US"
+    },
+    "include_breakdown": true
+  }'
+```
+
+```python Python
+import requests
+import json
+
+url = "https://api.aqipredictor.com/api/v1/predict"
+api_key = "aqp_prod_1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p"
+
+headers = {
+    "X-API-Key": api_key,
+    "Content-Type": "application/json"
+}
+
+payload = {
+    "temperature": 25.5,
+    "humidity": 65,
+    "pressure": 1015.3,
+    "wind_speed": 12.5,
+    "pm25": 35.2,
+    "pm10": 48.7,
+    "no2": 25.3,
+    "o3": 45.1,
+    "co": 0.8,
+    "location": {
+        "latitude": 37.7749,
+        "longitude": -122.4194,
+        "city": "San Francisco",
+        "country": "US"
+    },
+    "include_breakdown": True
+}
+
+response = requests.post(url, json=payload, headers=headers)
+result = response.json()
+
+print(f"AQI: {result['data']['aqi']}")
+print(f"Category: {result['data']['category']}")
+print(f"Confidence: {result['data']['confidence']:.2%}")
+```
+
+```javascript JavaScript
+const url = 'https://api.aqipredictor.com/api/v1/predict';
+const apiKey = 'aqp_prod_1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p';
+
+const payload = {
+  temperature: 25.5,
+  humidity: 65,
+  pressure: 1015.3,
+  wind_speed: 12.5,
+  pm25: 35.2,
+  pm10: 48.7,
+  no2: 25.3,
+  o3: 45.1,
+  co: 0.8,
+  location: {
+    latitude: 37.7749,
+    longitude: -122.4194,
+    city: 'San Francisco',
+    country: 'US'
+  },
+  include_breakdown: true
+};
+
+fetch(url, {
+  method: 'POST',
+  headers: {
+    'X-API-Key': apiKey,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify(payload)
+})
+  .then(response => response.json())
+  .then(data => {
+    console.log(`AQI: ${data.data.aqi}`);
+    console.log(`Category: ${data.data.category}`);
+    console.log(`Confidence: ${(data.data.confidence * 100).toFixed(1)}%`);
+  })
+  .catch(error => console.error('Error:', error));
+```
+
+</CodeGroup>
+
+## Example Response
+
+```json 200 Success
+{
+  "success": true,
+  "data": {
+    "aqi": 67,
+    "category": "moderate",
+    "dominant_pollutant": "o3",
+    "confidence": 0.89,
+    "health_recommendation": "Air quality is acceptable. However, sensitive individuals should consider limiting prolonged outdoor exertion.",
+    "breakdown": {
+      "pm25": 58,
+      "pm10": 45,
+      "no2": 32,
+      "o3": 67,
+      "co": 12
+    },
+    "prediction_metadata": {
+      "model_version": "2.4.1",
+      "processing_time_ms": 45
+    }
+  },
+  "timestamp": "2026-03-05T14:30:00Z"
+}
+```
+
+## Error Responses
+
+<Accordion title="400 Bad Request - Missing Parameters">
+```json
+{
+  "success": false,
+  "error": {
+    "code": "MISSING_PARAMETER",
+    "message": "Required parameter is missing from request.",
+    "details": {
+      "missing_parameters": ["pm25", "no2"],
+      "hint": "All pollutant parameters are required for accurate predictions."
+    }
+  },
+  "timestamp": "2026-03-05T14:30:00Z"
+}
+```
+</Accordion>
+
+<Accordion title="400 Bad Request - Invalid Parameter Value">
+```json
+{
+  "success": false,
+  "error": {
+    "code": "INVALID_PARAMETER",
+    "message": "Temperature value must be between -50 and 60 degrees Celsius.",
+    "details": {
+      "parameter": "temperature",
+      "value": 75,
+      "allowed_range": {
+        "min": -50,
+        "max": 60
+      }
+    }
+  },
+  "timestamp": "2026-03-05T14:30:00Z"
+}
+```
+</Accordion>
+
+<Accordion title="401 Unauthorized">
+```json
+{
+  "success": false,
+  "error": {
+    "code": "INVALID_API_KEY",
+    "message": "The provided API key is invalid or has been revoked."
+  },
+  "timestamp": "2026-03-05T14:30:00Z"
+}
+```
+</Accordion>
+
+<Accordion title="429 Rate Limit Exceeded">
+```json
+{
+  "success": false,
+  "error": {
+    "code": "RATE_LIMIT_EXCEEDED",
+    "message": "Rate limit exceeded. Please wait before making additional requests.",
+    "details": {
+      "retry_after": 45,
+      "limit": 60,
+      "window": "1 minute"
+    }
+  },
+  "timestamp": "2026-03-05T14:30:00Z"
+}
+```
+</Accordion>
+
+<Accordion title="500 Internal Server Error">
+```json
+{
+  "success": false,
+  "error": {
+    "code": "PREDICTION_FAILED",
+    "message": "Unable to generate prediction due to an internal error.",
+    "details": {
+      "error_id": "pred_err_9a8b7c6d",
+      "hint": "Please try again. Contact support if the issue persists."
+    }
+  },
+  "timestamp": "2026-03-05T14:30:00Z"
+}
+```
+</Accordion>
+
+## AQI Categories
+
+The response includes one of the following categories:
+
+| Category | AQI Range | Description |
+|----------|-----------|-------------|
+| `good` | 0-50 | Air quality is satisfactory, and air pollution poses little or no risk. |
+| `moderate` | 51-100 | Air quality is acceptable. However, there may be a risk for some people, particularly those who are unusually sensitive to air pollution. |
+| `unhealthy_sensitive` | 101-150 | Members of sensitive groups may experience health effects. The general public is less likely to be affected. |
+| `unhealthy` | 151-200 | Some members of the general public may experience health effects; members of sensitive groups may experience more serious health effects. |
+| `very_unhealthy` | 201-300 | Health alert: The risk of health effects is increased for everyone. |
+| `hazardous` | 301-500 | Health warning of emergency conditions: everyone is more likely to be affected. |
+
+## Best Practices
+
+<Note>
+Follow these recommendations for optimal prediction accuracy.
+</Note>
+
+### Measurement Quality
+
+- Use calibrated sensors for pollutant measurements
+- Ensure measurements are from the same time window (within 15 minutes)
+- Verify sensor readings are within realistic ranges before submission
+- Account for local conditions that may affect sensor accuracy
+
+### Request Optimization
+
+- Cache predictions for up to 10 minutes to reduce API calls
+- Only request `include_breakdown` when you need detailed pollutant analysis
+- Include location data when available for better context
+- Batch multiple predictions using the [Batch Predict](/api/batch-predict) endpoint
+
+### Handling Confidence Scores
+
+- Confidence > 0.85: High reliability, safe for critical decisions
+- Confidence 0.70-0.85: Good reliability, suitable for most use cases
+- Confidence < 0.70: Lower reliability, consider requesting fresh measurements
+
+<Warning>
+Do not use predictions with confidence scores below 0.5 for health-related decisions.
+</Warning>

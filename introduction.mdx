@@ -1,0 +1,215 @@
+---
+title: "Introduction to AQI Predictor"
+description: "Learn about AQI Predictor and how machine learning can help predict air quality"
+---
+
+## Welcome to AQI Predictor
+
+AQI Predictor is a powerful machine learning system designed to forecast Air Quality Index (AQI) values based on environmental data. Whether you're building environmental monitoring applications, conducting research, or need accurate air quality predictions for your region, AQI Predictor provides the tools and APIs to make it happen.
+
+## What is AQI?
+
+The Air Quality Index (AQI) is a standardized indicator that communicates how polluted the air currently is or how polluted it is forecast to become. The AQI translates complex air quality data into a simple numeric scale from 0 to 500:
+
+<CardGroup cols={2}>
+  <Card title="0-50: Good" icon="circle-check" iconType="solid" color="#22c55e">
+    Air quality is satisfactory, and air pollution poses little or no risk.
+  </Card>
+  <Card title="51-100: Moderate" icon="circle" color="#eab308">
+    Air quality is acceptable. However, there may be a risk for some people.
+  </Card>
+  <Card title="101-150: Unhealthy for Sensitive Groups" icon="triangle-exclamation" color="#f97316">
+    Members of sensitive groups may experience health effects.
+  </Card>
+  <Card title="151-200: Unhealthy" icon="octagon-exclamation" color="#ef4444">
+    Some members of the general public may experience health effects.
+  </Card>
+  <Card title="201-300: Very Unhealthy" icon="hexagon-exclamation" color="#a855f7">
+    Health alert: The risk of health effects is increased for everyone.
+  </Card>
+  <Card title="301-500: Hazardous" icon="skull" color="#7c2d12">
+    Health warning of emergency conditions: everyone is more likely to be affected.
+  </Card>
+</CardGroup>
+
+## Why Machine Learning for AQI Prediction?
+
+Traditional air quality forecasting relies on complex atmospheric models and chemical transport equations. While accurate, these approaches are computationally expensive and require extensive domain expertise. Machine learning offers several advantages:
+
+<AccordionGroup>
+  <Accordion title="Pattern Recognition" icon="brain">
+    ML models can identify complex patterns and relationships in historical air quality data that may not be apparent through traditional methods. They learn from past pollution episodes, meteorological conditions, and seasonal trends to make accurate predictions.
+  </Accordion>
+  
+  <Accordion title="Multivariate Analysis" icon="chart-network">
+    Air quality is influenced by dozens of factors including pollutant concentrations (PM2.5, PM10, NO2, O3), weather conditions (temperature, humidity, wind), temporal patterns (time of day, day of week, season), and spatial features (location, nearby sources). ML models naturally handle these high-dimensional inputs.
+  </Accordion>
+  
+  <Accordion title="Adaptive Learning" icon="arrows-rotate">
+    As new data becomes available, ML models can be retrained to adapt to changing environmental conditions, new pollution sources, or climate shifts. This ensures predictions remain accurate over time.
+  </Accordion>
+  
+  <Accordion title="Computational Efficiency" icon="gauge-high">
+    Once trained, ML models can generate predictions in milliseconds, making them ideal for real-time forecasting systems and high-throughput applications.
+  </Accordion>
+</AccordionGroup>
+
+## Key Features
+
+AQI Predictor provides a comprehensive toolkit for air quality prediction:
+
+### Pre-trained Models
+
+Start making predictions immediately with our production-ready models trained on millions of data points from thousands of monitoring stations worldwide.
+
+```python
+from aqi_predictor import AQIClient
+
+client = AQIClient(api_key="your_api_key")
+
+# Get an instant prediction
+prediction = client.predict({
+    "temperature": 25.5,
+    "humidity": 65,
+    "pm25": 12.3,
+    "pm10": 22.1,
+    "no2": 15.2,
+    "location": {"lat": 37.7749, "lon": -122.4194}
+})
+
+print(f"Predicted AQI: {prediction.aqi}")  # Output: Predicted AQI: 42
+```
+
+### Custom Model Training
+
+Train models on your own regional data for improved accuracy in your specific geographic area:
+
+```python
+from aqi_predictor import ModelTrainer
+
+trainer = ModelTrainer()
+trainer.load_data("your_historical_data.csv")
+trainer.train(model_type="lstm", epochs=100)
+trainer.save_model("my_regional_model")
+```
+
+### RESTful API
+
+Integrate air quality predictions into your applications with our comprehensive REST API:
+
+```bash
+curl -X POST https://api.aqipredictor.com/v1/predict \
+  -H "X-API-Key: your_api_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "temperature": 25.5,
+    "humidity": 65,
+    "pm25": 12.3,
+    "pm10": 22.1,
+    "no2": 15.2
+  }'
+```
+
+### Batch Processing
+
+Process large datasets efficiently with batch prediction capabilities:
+
+```python
+predictions = client.batch_predict([
+    {"temperature": 25.5, "humidity": 65, "pm25": 12.3},
+    {"temperature": 28.1, "humidity": 58, "pm25": 18.7},
+    {"temperature": 22.3, "humidity": 72, "pm25": 9.1}
+])
+```
+
+## Use Cases
+
+AQI Predictor is used by organizations across various sectors:
+
+<CardGroup cols={2}>
+  <Card title="Public Health" icon="hospital">
+    Health departments use AQI predictions to issue advisories and warnings, helping vulnerable populations avoid exposure during poor air quality episodes.
+  </Card>
+  
+  <Card title="Environmental Monitoring" icon="cloud">
+    Environmental agencies deploy AQI Predictor for continuous monitoring and forecasting across their monitoring networks.
+  </Card>
+  
+  <Card title="Smart Cities" icon="building">
+    Urban planners and smart city platforms integrate AQI predictions to optimize traffic flow, manage industrial emissions, and improve air quality.
+  </Card>
+  
+  <Card title="Research" icon="microscope">
+    Academic researchers use AQI Predictor to study air pollution patterns, climate change impacts, and the effectiveness of pollution control measures.
+  </Card>
+</CardGroup>
+
+## How It Works
+
+AQI Predictor uses state-of-the-art deep learning architectures to model temporal dependencies in air quality data:
+
+1. **Data Collection**: Environmental sensors and weather stations collect pollutant concentrations and meteorological data
+2. **Feature Engineering**: Raw data is processed to extract temporal patterns, rolling statistics, and interaction features
+3. **Model Prediction**: LSTM or Transformer models process the sequence of historical observations to forecast future AQI
+4. **Post-processing**: Predictions are validated against physical constraints and converted to AQI categories
+
+<Note>
+Want to understand the technical details? Check out our [Core Concepts](/concepts/overview) section for an in-depth explanation of the model architecture and prediction methodology.
+</Note>
+
+## Getting Started
+
+Ready to start making predictions? Follow these guides:
+
+<Steps>
+  <Step title="Installation">
+    Install AQI Predictor using pip and configure your environment.
+    
+    [View installation guide →](/installation)
+  </Step>
+  
+  <Step title="Quickstart">
+    Make your first prediction in less than 5 minutes.
+    
+    [View quickstart guide →](/quickstart)
+  </Step>
+  
+  <Step title="Explore the API">
+    Learn about the full API capabilities and integration options.
+    
+    [View API reference →](/api/overview)
+  </Step>
+</Steps>
+
+## Performance Metrics
+
+Our pre-trained models achieve state-of-the-art accuracy:
+
+| Metric | Value | Description |
+|--------|-------|-------------|
+| MAE | 4.82 AQI units | Mean absolute error across all predictions |
+| RMSE | 7.34 AQI units | Root mean squared error |
+| R² Score | 0.9347 | Coefficient of determination |
+| Category Accuracy | 91.2% | Percentage of predictions in correct AQI category |
+
+These metrics are measured on held-out test data across diverse geographic locations and seasons.
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Get started with your first prediction
+  </Card>
+  
+  <Card title="Core Concepts" icon="book" href="/concepts/overview">
+    Learn about AQI prediction fundamentals
+  </Card>
+  
+  <Card title="API Reference" icon="code" href="/api/overview">
+    Explore the complete API documentation
+  </Card>
+  
+  <Card title="Training Guide" icon="chart-line" href="/guides/training">
+    Train custom models on your data
+  </Card>
+</CardGroup>
